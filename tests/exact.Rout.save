@@ -1,0 +1,57 @@
+
+R version 4.6.0 (2026-04-24) -- "Because it was There"
+Copyright (C) 2026 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> 
+> pkgs <- c("free1way.docreg", "coin")
+> if (!all(sapply(pkgs, require, character.only = TRUE)))
++     quit()
+Loading required package: free1way.docreg
+Loading required package: coin
+Loading required package: survival
+> 
+> set.seed(29)
+> 
+> N <- 15
+> w <- gl(2, N)[-(1:floor(N/2))]
+> 
+> pvals <- clwr <- cupr <- matrix(0, nrow = 10, ncol = 2)
+> 
+> for (i in seq_len(nrow(pvals))) {
++     y <- round(rlogis(length(w), location = c(0, .5)[w]))
++     fe <- free1way(y ~ w, exact = TRUE)
++     fa <- free1way(y ~ w, B = 100000)
++     pvals[i,1] <- summary(fe, test = "Perm")$p.value
++     pvals[i,2] <- summary(fa, test = "Perm")$p.value
++     ci <- confint(fe)
++     clwr[i,1] <- ci[1]
++     cupr[i,1] <- ci[2]
++     ci <- confint(fa)
++     clwr[i,2] <- ci[1]
++     cupr[i,2] <- ci[2]
++ }
+> 
+> max(abs(pvals[,1] - pvals[,2])) < .005
+[1] TRUE
+> max(abs(clwr[,1] - clwr[,2])) < .05
+[1] TRUE
+> max(abs(cupr[,1] - cupr[,2])) < .05
+[1] TRUE
+> 
+> 
+> proc.time()
+   user  system elapsed 
+  6.972   0.205   7.171 

@@ -1,0 +1,227 @@
+
+R version 4.6.0 (2026-04-24) -- "Because it was There"
+Copyright (C) 2026 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> 
+> set.seed(29)
+> options(digits = 5)
+> 
+> pkgs <- c("free1way.docreg", "survival", "tram")
+> if (!all(sapply(pkgs, require, character.only = TRUE)))
++     quit()
+Loading required package: free1way.docreg
+Loading required package: survival
+Loading required package: tram
+Loading required package: mlt
+Loading required package: basefun
+Loading required package: variables
+Loading required package: mvtnorm
+> 
+> beta <- 1
+> N <- 10
+> w <- gl(2, N)
+> d <- data.frame(time = rexp(length(w), rate = c(1, 1 + beta)[w]), w = w)
+> d$cens <- rbinom(length(w), size = 1L, prob = .3) == 1
+> 
+> m <- Polr(R(Surv(time, cens), as.R.ordered = TRUE) ~ w, data = d, method = "cloglog")
+> coef(m)
+      w2 
+0.016554 
+> 
+> vcov(m)
+        w2
+w2 0.86665
+> residuals(m)
+ [1]  0.920519  0.515053  0.057618  0.920519 -0.564415  0.000000  0.057618
+ [8] -0.295877 -0.708442 -0.902585  0.222286  0.056672  0.000000 -0.971932
+[15]  0.222286  0.222286  0.506597  0.506597  0.056672 -0.821464
+> 
+> (cf <- coef(as.mlt(m)))
+ R.Surv.time..cens...as.R.ordered...TRUE.(-Inf,0.122] 
+                                            -2.853925 
+R.Surv.time..cens...as.R.ordered...TRUE.(0.122,0.325] 
+                                            -1.978352 
+R.Surv.time..cens...as.R.ordered...TRUE.(0.325,0.381] 
+                                            -1.487238 
+R.Surv.time..cens...as.R.ordered...TRUE.(0.381,0.655] 
+                                            -1.021327 
+R.Surv.time..cens...as.R.ordered...TRUE.(0.655,0.656] 
+                                            -0.663485 
+  R.Surv.time..cens...as.R.ordered...TRUE.(0.656,1.8] 
+                                            -0.082818 
+                                                   w2 
+                                             0.016554 
+> 
+> ft <- with(d, free1way(y = time, groups = w, 
++                        event = cens, 
++                        link = "cloglog"))
+> logLik(ft)
+[1] -18.624
+> logLik(m)
+'log Lik.' -18.624 (df=7)
+> 
+> coef(ft)
+      w2 
+0.016552 
+> coef(m)
+      w2 
+0.016554 
+> 
+> vcov(ft)
+        w2
+w2 0.86666
+> vcov(m)
+        w2
+w2 0.86665
+> 
+> pr <- ft$par
+> cumsum(pr[-1])
+[1] -2.8539 -4.8323 -6.3195 -7.3409 -8.0043 -8.0872
+> cf
+ R.Surv.time..cens...as.R.ordered...TRUE.(-Inf,0.122] 
+                                            -2.853925 
+R.Surv.time..cens...as.R.ordered...TRUE.(0.122,0.325] 
+                                            -1.978352 
+R.Surv.time..cens...as.R.ordered...TRUE.(0.325,0.381] 
+                                            -1.487238 
+R.Surv.time..cens...as.R.ordered...TRUE.(0.381,0.655] 
+                                            -1.021327 
+R.Surv.time..cens...as.R.ordered...TRUE.(0.655,0.656] 
+                                            -0.663485 
+  R.Surv.time..cens...as.R.ordered...TRUE.(0.656,1.8] 
+                                            -0.082818 
+                                                   w2 
+                                             0.016554 
+> 
+> ft
+
+	2-sample Savage test against proportional hazards alternatives
+
+data:  time by w (1, 2)
+Perm Z = 0.0152, p-value = 0.99
+alternative hypothesis: true log-hazard ratio is not equal to 0
+
+> perm_test(m)
+Loading required namespace: coin
+
+	Asymptotic Permutation Transformation Score Test
+
+data:  Polr(formula = R(Surv(time, cens), as.R.ordered = TRUE) ~ w,     data = d, method = "cloglog")
+Z = -0.0152, p-value = 0.99
+alternative hypothesis: true  for w2 is not equal to 0
+95 percent confidence interval:
+ -1.8589  1.8772
+sample estimates:
+  for w2 
+0.016554 
+
+> 
+> data("GBSG2", package = "TH.data")
+> 
+> survdiff(Surv(time, cens) ~ horTh, data = GBSG2)
+Call:
+survdiff(formula = Surv(time, cens) ~ horTh, data = GBSG2)
+
+            N Observed Expected (O-E)^2/E (O-E)^2/V
+horTh=no  440      205      180      3.37      8.56
+horTh=yes 246       94      119      5.12      8.56
+
+ Chisq= 8.6  on 1 degrees of freedom, p= 0.003 
+> 
+> m <- coxph(Surv(time, cens) ~ horTh, data = GBSG2)
+> coef(m)
+horThyes 
+-0.36401 
+> vcov(m)
+         horThyes
+horThyes 0.015636
+> 
+> perm_test(m)
+
+	Asymptotic Permutation (Log-rank) Score Test
+
+data:  coxph(formula = Surv(time, cens) ~ horTh, data = GBSG2)
+Z = 2.98, p-value = 0.0029
+alternative hypothesis: true log-hazard ratio for horThyes is not equal to 0
+95 percent confidence interval:
+ -0.60458 -0.12365
+sample estimates:
+log-hazard ratio for horThyes 
+                     -0.36401 
+
+> 
+> ft <- with(GBSG2, free1way(Surv(time, cens) ~ horTh,
++                            link = "cloglog"))
+> coef(ft)
+horThyes 
+ 0.36398 
+> vcov(ft)
+         horThyes
+horThyes 0.015632
+> 
+> ft
+
+	2-sample Savage test against proportional hazards alternatives
+
+data:  Surv(time, cens) by horTh (no, yes)
+Perm Z = 2.97, p-value = 0.003
+alternative hypothesis: true log-hazard ratio is not equal to 0
+
+> 
+> survdiff(Surv(time, cens) ~ horTh + strata(tgrade), data = GBSG2)
+Call:
+survdiff(formula = Surv(time, cens) ~ horTh + strata(tgrade), 
+    data = GBSG2)
+
+            N Observed Expected (O-E)^2/E (O-E)^2/V
+horTh=no  440      205      182      2.84       7.4
+horTh=yes 246       94      117      4.43       7.4
+
+ Chisq= 7.4  on 1 degrees of freedom, p= 0.007 
+> 
+> m <- coxph(Surv(time, cens) ~ horTh + strata(tgrade), data = GBSG2)
+> coef(m)
+horThyes 
+-0.33972 
+> vcov(m)
+         horThyes
+horThyes 0.015754
+> 
+> # perm_test(m)
+> 
+> ft <- with(GBSG2, free1way(Surv(time, cens) ~ horTh | tgrade, 
++                            link = "cloglog"))
+> coef(ft)
+horThyes 
+ 0.34056 
+> vcov(ft)
+         horThyes
+horThyes 0.015751
+> 
+> ft
+
+	2-sample Savage test against proportional hazards alternatives
+
+data:  Surv(time, cens) by horTh (no, yes) 
+	 stratified by tgrade
+Perm Z = 2.76, p-value = 0.0058
+alternative hypothesis: true log-hazard ratio is not equal to 0
+
+> 
+> 
+> proc.time()
+   user  system elapsed 
+  1.747   0.087   1.829 

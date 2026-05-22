@@ -1,0 +1,243 @@
+
+R version 4.6.0 (2026-04-24) -- "Because it was There"
+Copyright (C) 2026 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> 
+> library("free1way.docreg")
+> options(digits = 5)
+> set.seed(29)
+> tol <- 1e-5
+> 
+> level <- .9
+> N <- 15
+> w <- gl(2, N)
+> beta <- -1
+> y <- rlogis(length(w), location = c(0, beta)[w])
+> 
+> ft <- free1way(y ~ w)
+> coef(ft)
+     w2 
+0.50639 
+> logLik(ft)
+[1] -101.72
+> (ci <- confint(ft, test = "Wald", level = level))
+       5 %  95 %
+w2 -0.5522 1.565
+> summary(ft1 <- free1way(y ~ w, mu = ci[1]), test = "Wald", alternative =
++ "greater")$p.value
+Wald Z 
+  0.05 
+> summary(ft2 <- free1way(y ~ w, mu = ci[2]), test = "Wald", alternative =
++ "less")$p.value
+Wald Z 
+  0.05 
+> summary(ft12 <- free1way(y ~ w, mu = ci[1]), test = "Wald")$p.value
+Wald chi-squared 
+             0.1 
+> summary(ft22 <- free1way(y ~ w, mu = ci[2]), test = "Wald")$p.value
+Wald chi-squared 
+             0.1 
+> coef(ft1) + ci[1]
+     w2 
+0.50639 
+> coef(ft2) + ci[2]
+     w2 
+0.50639 
+> logLik(ft1)
+[1] -101.72
+> logLik(ft2)
+[1] -101.72
+> 
+> all.equal(ci, confint(ft1, test = "Wald", level = level) + ci[1], 
++           tolerance = tol)
+[1] TRUE
+> all.equal(ci, confint(ft2, test = "Wald", level = level) + ci[2],
++           tolerance = tol)
+[1] TRUE
+> all.equal(ci, confint(ft12, test = "Wald", level = level) + ci[1],
++           tolerance = tol)
+[1] TRUE
+> all.equal(ci, confint(ft22, test = "Wald", level = level) + ci[2],
++           tolerance = tol)
+[1] TRUE
+> 
+> 
+> (ci <- confint(ft, test = "LRT", level = level))
+        5 %   95 %
+w2 -0.54755 1.5797
+> summary(ft12 <- free1way(y ~ w, mu = ci[1]), test = "LRT")$p.value
+logLR chi-squared 
+          0.10001 
+> summary(ft22 <- free1way(y ~ w, mu = ci[2]), test = "LRT")$p.value
+logLR chi-squared 
+         0.099993 
+> 
+> all.equal(ci, confint(ft12, test = "LRT", level = level) + ci[1],
++           tolerance = tol)
+[1] TRUE
+> all.equal(ci, confint(ft22, test = "LRT", level = level) + ci[2],
++           tolerance = tol)
+[1] TRUE
+> 
+> 
+> (ci <- confint(ft, test = "Rao", level = level))
+        5 %   95 %
+w2 -0.54235 1.5555
+> summary(ft12 <- free1way(y ~ w, mu = ci[1]), test = "Rao")$p.value
+Rao chi-squared 
+        0.10001 
+> summary(ft22 <- free1way(y ~ w, mu = ci[2]), test = "Rao")$p.value
+Rao chi-squared 
+        0.10001 
+> 
+> all.equal(ci, confint(ft12, test = "Rao", level = level) + ci[1],
++           tolerance = tol)
+[1] TRUE
+> all.equal(ci, confint(ft22, test = "Rao", level = level) + ci[2],
++           tolerance = tol)
+[1] TRUE
+> 
+> 
+> (ci <- confint(ft, test = "Permutation", level = level))
+       5 %   95 %
+w2 -0.5708 1.5839
+> summary(ft1 <- free1way(y ~ w, mu = ci[1]), test = "Permutation", alternative = "greater")$p.value
+Perm Z 
+  0.05 
+> summary(ft2 <- free1way(y ~ w, mu = ci[2]), test = "Permutation", alternative = "less")$p.value
+Perm Z 
+  0.05 
+> summary(ft12 <- free1way(y ~ w, mu = ci[1]), test = "Permutation")$p.value
+Perm Z 
+   0.1 
+> summary(ft22 <- free1way(y ~ w, mu = ci[2]), test = "Permutation")$p.value
+Perm Z 
+   0.1 
+> coef(ft1) + ci[1]
+     w2 
+0.50639 
+> coef(ft2) + ci[2]
+     w2 
+0.50639 
+> logLik(ft1)
+[1] -101.72
+> logLik(ft2)
+[1] -101.72
+> 
+> all.equal(ci, confint(ft1, test = "Permutation", level = level) + ci[1], 
++           tolerance = tol)
+[1] TRUE
+> all.equal(ci, confint(ft2, test = "Permutation", level = level) + ci[2],
++           tolerance = tol)
+[1] TRUE
+> all.equal(ci, confint(ft12, test = "Permutation", level = level) + ci[1],
++           tolerance = tol)
+[1] TRUE
+> all.equal(ci, confint(ft22, test = "Permutation", level = level) + ci[2],
++           tolerance = tol)
+[1] TRUE
+> 
+> ftc <- free1way(y ~ w, mu = coef(ft))
+> summary(ftc, test = "Permutation", alternative = "greater")$p.value
+Perm Z 
+   0.5 
+> summary(ftc, test = "Permutation", alternative = "less")$p.value
+Perm Z 
+   0.5 
+> summary(ftc, test = "Permutation")$p.value
+Perm Z 
+     1 
+> 
+> confint(ftc, test = "Permutation", level = level) + coef(ft)
+       5 %   95 %
+w2 -0.5708 1.5839
+> 
+> B <- 1000
+> set.seed(29)
+> ft <- free1way(y ~ w, B = B)
+> (ci <- confint(ft, test = "Permutation", level = level))
+        5 %   95 %
+w2 -0.59327 1.6065
+attr(,"Attained level")
+[1] 0.91
+> ### check inversion of confidence intervals: These numbers should be
+> set.seed(29)
+> ### <= (1 - level) / 2 = .05
+> summary(ft1 <- free1way(y ~ w, B = B, mu = ci[1]), test = "Permutation", alternative = "greater")$p.value
+[1] 0.05
+> set.seed(29)
+> summary(ft2 <- free1way(y ~ w, B = B, mu = ci[2]), test = "Permutation", alternative = "less")$p.value
+[1] 0.049
+> set.seed(29)
+> ### <= 1 - level = .1
+> summary(ft12 <- free1way(y ~ w, B = B, mu = ci[1]), test = "Permutation")$p.value
+[1] 0.1
+> set.seed(29)
+> summary(ft22 <- free1way(y ~ w, B = B, mu = ci[2]), test = "Permutation")$p.value
+[1] 0.098
+> coef(ft1) + ci[1]
+     w2 
+0.50639 
+> coef(ft2) + ci[2]
+     w2 
+0.50639 
+> logLik(ft1)
+[1] -101.72
+> logLik(ft2)
+[1] -101.72
+> 
+> all.equal(ci, confint(ft1, test = "Permutation", level = level) + ci[1], 
++           tolerance = tol)
+[1] TRUE
+> all.equal(ci, confint(ft2, test = "Permutation", level = level) + ci[2],
++           tolerance = tol)
+[1] TRUE
+> all.equal(ci, confint(ft12, test = "Permutation", level = level) + ci[1],
++           tolerance = tol)
+[1] TRUE
+> all.equal(ci, confint(ft22, test = "Permutation", level = level) + ci[2],
++           tolerance = tol)
+[1] TRUE
+> 
+> 
+> summary(ftg <- free1way(y ~ w, mu = coef(ft)), test = "Permutation", alternative = "greater")$p.value
+Perm Z 
+   0.5 
+> summary(ftl <- free1way(y ~ w, mu = coef(ft)), test = "Permutation", alternative = "less")$p.value
+Perm Z 
+   0.5 
+> summary(ftt <- free1way(y ~ w, mu = coef(ft)), test = "Permutation")$p.value
+Perm Z 
+     1 
+> 
+> set.seed(29)
+> ftc <- free1way(y ~ w, mu = coef(ft), B = B)
+> summary(ftc, test = "Permutation", alternative = "greater")$p.value
+[1] 0.521
+> summary(ftc, test = "Permutation", alternative = "less")$p.value
+[1] 0.479
+> summary(ftc, test = "Permutation")$p.value
+[1] 0.958
+> 
+> confint(ftc, test = "Permutation", level = level) + coef(ft)
+        5 %   95 %
+w2 -0.59327 1.6065
+attr(,"Attained level")
+[1] 0.91
+> 
+> proc.time()
+   user  system elapsed 
+  3.488   0.072   3.554 
