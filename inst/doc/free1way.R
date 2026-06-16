@@ -2357,3 +2357,17 @@ optim(coef(x), fn = fun, method = "Brent",
 ### code chunk number 53: MPL_Jeffreys
 ###################################################
 free1way(y ~ w, link = "probit", MPL_Jeffreys = TRUE)
+
+
+###################################################
+### code chunk number 54: bib
+###################################################
+thisdir <- getwd()
+bibfile <- system.file("REFERENCES.bib", package = "free1way.docreg")
+### bibfile may contain spaces LaTeX is unable to deal with on MacOS it seems
+if (file.copy(bibfile, to = thisdir, overwrite = TRUE)) {
+    bibfile <- "REFERENCES.bib"
+} else {
+    ### hope for the best
+    bibfile <- file.path("..", "inst", "REFERENCES.bib")
+}

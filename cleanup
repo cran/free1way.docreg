@@ -69,4 +69,6 @@ done
 
 find . -name "DEADJOE" -exec rm -f {} \;
 
+rm -rf REFERENCES.bib
+
 exit 0

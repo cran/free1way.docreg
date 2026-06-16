@@ -1,5 +1,32 @@
-# Default NAMESPACE created by R
-# Remove the previous line if you edit this file
 
+### when shipped w/o R/ and man/
 # Export all names
 exportPattern("^[^.]")
+
+### else
+#importFrom("stats", "dlogis", "optim", "plogis", "qlogis", "qnorm",
+#           "quantile", "uniroot","r2dtable", "pnorm", "dnorm", 
+#           "pchisq", "qchisq", "coef", "confint", "model.matrix", "printCoefmat",
+#           "splinefun", "vcov", "runif", "stepfun",
+#           "ecdf", "na.pass", "terms", "model.weights", "xtabs", "rmultinom",
+#           "as.formula", "confint.default", "delete.response",
+#           "model.frame", "lm.fit")
+#importFrom("graphics", "lines", "points", "polygon")
+
+#export(free1way, power.free1way.test, ppplot, rfree1way)
+
+#S3method("free1way", "formula")
+#S3method("free1way", "numeric")
+#S3method("free1way", "factor")
+#S3method("free1way", "table")
+#S3method("coef", "free1way")
+#S3method("vcov", "free1way")
+#S3method("logLik", "free1way")
+#S3method("confint", "free1way")
+#S3method("summary", "free1way")
+#S3method("terms", "free1way")
+#S3method("plot", "free1way")
+#S3method("model.frame", "free1way")
+#S3method("model.matrix", "free1way")
+#S3method("print", "free1way")
+#S3method("print", "summary.free1way")

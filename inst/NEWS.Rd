@@ -2,6 +2,16 @@
 \name{NEWS}
 \title{NEWS file for the \pkg{free1way.docreg} package}
 
+\section{Changes in Version 1.0-1 (2026-06-16)}{
+  \subsection{Bugfixes}{
+    \itemize{
+      \item \code{strat_ratio != 1} in \code{rfree1way} didn't work as advertised.
+      \item Zeros in \code{prob} argument to \code{power.free1way.test} triggered an
+            error and are now handled correctly.
+    }
+  }
+}
+
 \section{Changes in Version 1.0-0 (2026-05-18)}{
   \itemize{
     \item Function \code{free1way} implementing semiparametrically efficient inference
