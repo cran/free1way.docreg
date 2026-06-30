@@ -1,13 +1,13 @@
-a7136f5245c5d8c64b5056153759683f *DESCRIPTION
+4ab68327b1b2b8347e7afed3d014f858 *DESCRIPTION
 4d13cd4ab02890076af1290074b5fd2c *NAMESPACE
-80df1c6f7d14c5050e1e812810493dd4 *build/vignette.rds
+8eff6f9b26824ec0167d705f91b9f534 *build/vignette.rds
 761e1e2a1634f15dd2107ae2f7fe629a *cleanup
-fabb8f804faa4c47efbb65f6cfe24f98 *inst/NEWS.Rd
+ea99ee7b130bfe2649bd3bc21fa62420 *inst/NEWS.Rd
 15dfaa27f669b0929eb2cad55619fed8 *inst/REFERENCES.bib
 63cd0bb19ef602a6e2110f1421fda1ee *inst/doc/free1way.R
-c61c93990152577d0c1f4c5e255ae580 *inst/doc/free1way.Rnw
-167a0734e69edfb0df3bcc810878eda8 *inst/doc/free1way.pdf
-29b6e0c94a663a714d62da9e8cd76106 *inst/nuweb/free1way.w
+e523a2d9c370fb7c2e18eb14aaa98396 *inst/doc/free1way.Rnw
+7c271670880e7263df7829592b653fd0 *inst/doc/free1way.pdf
+d386d7ba07cf33f3f8838e660e145526 *inst/nuweb/free1way.w
 8e44cf75600c05433a93d8575ee8cc21 *tests/KM.R
 9c2941eca4a93bdb4d3d417422fa4c2e *tests/bugfixes.R
 4b8ddc9b15ad3cc92aaa266f8192b5a7 *tests/confint.R
@@ -31,4 +31,4 @@ e0f5c31c29cfdbef57fd4ece65406457 *tests/jobsatisfaction.R
 0f5f7a68a946968ded762a73071122b9 *tests/power.R
 95e832d1129e145f21fe5daf9757a7be *tests/power.Rout.save
 7e3dd7d16a1456b41010adfd087afe25 *tests/speed.R
-c61c93990152577d0c1f4c5e255ae580 *vignettes/free1way.Rnw
+e523a2d9c370fb7c2e18eb14aaa98396 *vignettes/free1way.Rnw

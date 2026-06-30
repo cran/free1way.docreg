@@ -2608,9 +2608,9 @@ summary.free1way <- function(object, test,
     }
     cfmat <- cbind(ESTIMATE, SE, STATISTIC, PVAL)
     colnames(cfmat) <- c(object$link$parm, "Std. Error", "z value",
-                         switch(alternative, "two.sided" = "P(>|z|)",
-                                             "less" = "P(<z)",
-                                             "greater" = "P(>z)"))
+                         switch(alternative, "two.sided" = "Pr(>|z|)",
+                                             "less" = "Pr(<z)",
+                                             "greater" = "Pr(>z)"))
     ret <- list(call = object$call, coefficients = cfmat)
     class(ret) <- "summary.free1way"
     return(ret)
@@ -2796,7 +2796,7 @@ confint.free1way <- function(object, parm,
     CINT <- switch(what, "shift" = CINT,
                          "PI" = object$link$parm2PI(CINT),
                          "AUC" = object$link$parm2PI(CINT), ### same as PI 
-                         "OVL" = object$link$parm2OVL(CINT))
+                         "OVL" = object$link$parm2OVL(CINT))[parm, , drop = FALSE]
     return(CINT)
 }
 @}

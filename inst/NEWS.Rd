@@ -2,6 +2,14 @@
 \name{NEWS}
 \title{NEWS file for the \pkg{free1way.docreg} package}
 
+\section{Changes in Version 1.0-2 (2026-06-30)}{
+  \subsection{Bugfixes}{
+    \itemize{
+      \item Fix missing links in vignette.
+    }
+  }
+}
+
 \section{Changes in Version 1.0-1 (2026-06-16)}{
   \subsection{Bugfixes}{
     \itemize{
