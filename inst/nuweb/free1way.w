@@ -4071,49 +4071,10 @@ Sometimes, especially under complete separation, the maximum likelihood
 estimator does not exist. We could think of offering the option to add a
 penalty term to the log-likelihood, for example half of the log-determinant
 of the Hessian (Jeffreys prior) as suggested by \cite{Firth1993} and studied in
-\cite{KosmidisFirth2020}. Here is an example
-
-<<Jeffreys>>=
-N <- 20
-w <- gl(2, N)
-y <- rnorm(length(w), mean = c(-2, 3)[w])
-
-x <- free1way(y ~ w, link = "probit")
-coef(x)
-logLik(x)
-
-pll <- function(cf) {
-
-    start <- x$par
-    start[1] <- cf
-    x$profile(start, fix = 1)
-}
-
-### https://doi.org/10.1111/j.0006-341X.2001.00114.x
-### https://doi.org/10.1111/j.1467-9876.2012.01057.x
-### https://doi.org/10.1186/s12874-017-0313-9
-### https://files.osf.io/v1/resources/fet4d_v3/providers/osfstorage/682fb176db88f967facacb5a?format=pdf&action=download&direct&version=1
-### https://doi.org/10.1002/sim.6537
-### https://doi.org/10.1007/s11222-023-10217-3
-### https://arxiv.org/abs/2510.06465
-fun <- function(cf) {
-    ret <- pll(cf)
-    ret$value - .5 * determinant(ret$hessian, logarithm = TRUE)$modulus
-}
-
-ci <- confint(x, level = .99, test = "Wald")
-grd <- seq(from = ci[1], to = ci[2], length.out = 50)
-
-optim(coef(x), fn = fun, method = "Brent", 
-      lower = min(grd), upper = max(grd))[c("par", "value")]
-@@
-
-The \code{MPL_Jeffreys} argument can be used to request this type of
-penalisation from \code{free1way} (this argument should be added to
-\code{free1way.table} and documented)
-<<MPL_Jeffreys>>=
-free1way(y ~ w, link = "probit", MPL_Jeffreys = TRUE)
-@@
+\cite{KosmidisFirth2020}. Until and including 1.0-3 (\proglang{R} 4.6-0), \code{free1way}
+penalised the profile likelihood, automatically if deemed necessary.
+Later versions penalise all parameters on request, that is, when 
+the \code{MPL_Jeffreys} argument is \code{TRUE}.
 
 \chapter{Acknowledgements}
 

@@ -2,6 +2,15 @@
 \name{NEWS}
 \title{NEWS file for the \pkg{free1way.docreg} package}
 
+\section{Changes in Version 1.0-3 (2026-09-07)}{
+  \subsection{Documentation}{
+    \itemize{
+      \item Prepare for upcoming changes in penalisation implementation:
+            \code{free1way} will perform penalisation only when requested.
+    }
+  }
+}
+
 \section{Changes in Version 1.0-2 (2026-06-30)}{
   \subsection{Bugfixes}{
     \itemize{

@@ -1,5 +1,5 @@
 
-R version 4.6.0 (2026-04-24) -- "Because it was There"
+R Under development (unstable) (2026-09-07 r90499) -- "Unsuffered Consequences"
 Copyright (C) 2026 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu
 
@@ -19,6 +19,7 @@ Type 'q()' to quit R.
 > source(file.path(R.home("share"), "R", "examples-header.R"))
 > options(warn = 1)
 > library('free1way.docreg')
+Loading required package: bibtex
 > 
 > base::assign(".oldSearch", base::search(), pos = 'CheckExEnv')
 > base::assign(".old_wd", base::getwd(), pos = 'CheckExEnv')
@@ -66,11 +67,13 @@ Call:
 free1way.formula(formula = Ozone ~ Month, data = airquality)
 
 Coefficients:
-       log-odds ratio Std. Error z value P(>|z|)
-Month6        0.81236    0.64415 1.26113  0.2073
-Month7        2.52816    0.53153 4.75639  0.0000
-Month8        2.38260    0.53370 4.46432  0.0000
-Month9        0.75132    0.47177 1.59256  0.1113
+       log-odds ratio Std. Error z value  Pr(>|z|)    
+Month6        0.81236    0.64415  1.2611    0.2073    
+Month7        2.52816    0.53153  4.7564 1.971e-06 ***
+Month8        2.38260    0.53370  4.4643 8.032e-06 ***
+Month9        0.75132    0.47177  1.5926    0.1113    
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 > confint(kt, test = "Wald")
             2.5 %   97.5 %
 Month6 -0.4501567 2.074884
@@ -113,9 +116,11 @@ Call:
 free1way.formula(formula = time ~ me | id, data = d)
 
 Coefficients:
-               log-odds ratio Std. Error  z value P(>|z|)
-meNarrow Angle       -1.26528    0.68264 -1.85352  0.0638
-meWide Angle         -3.28920    0.79367 -4.14428  0.0000
+               log-odds ratio Std. Error z value  Pr(>|z|)    
+meNarrow Angle       -1.26528    0.68264 -1.8535   0.06381 .  
+meWide Angle         -3.28920    0.79367 -4.1443 3.409e-05 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 > confint(ft, test = "Wald")
                    2.5 %      97.5 %
 meNarrow Angle -2.603222  0.07266103
@@ -162,8 +167,10 @@ Call:
 free1way.table(y = xtabs(~performance + survey + voter, data = x))
 
 Coefficients:
-          log-odds ratio Std. Error z value P(>|z|)
-survey2nd        1.11258    0.19128 5.81639       0
+          log-odds ratio Std. Error z value  Pr(>|z|)    
+survey2nd        1.11258    0.19128  5.8164 6.013e-09 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 > confint(mcn, test = "Wald")
               2.5 %   97.5 %
 survey2nd 0.7376684 1.487484
@@ -225,10 +232,12 @@ Call:
 free1way.table(y = aperm(Satisfaction, perm = c(2, 1, 3)))
 
 Coefficients:
-                  log-odds ratio Std. Error z value P(>|z|)
-Income5000-15000         0.10794    0.55953 0.19290  0.8470
-Income15000-25000        1.45998    0.62561 2.33369  0.0196
-Income>25000             1.23282    0.65693 1.87663  0.0606
+                  log-odds ratio Std. Error z value Pr(>|z|)  
+Income5000-15000         0.10794    0.55953  0.1929  0.84703  
+Income15000-25000        1.45998    0.62561  2.3337  0.01961 *
+Income>25000             1.23282    0.65693  1.8766  0.06057 .
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 > 
 > 
 > 
@@ -361,7 +370,7 @@ groupsG2 0.6490714 0.8381977
 > cleanEx()
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  2.702 0.041 2.742 0 0 
+Time elapsed:  2.763 0.056 2.833 0 0 
 > grDevices::dev.off()
 null device 
           1 
@@ -373,4 +382,4 @@ null device
 > quit('no')
 > proc.time()
    user  system elapsed 
-  2.785   0.053   2.831 
+  2.901   0.074   2.978 
