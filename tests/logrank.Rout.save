@@ -1,5 +1,5 @@
 
-R version 4.6.0 (2026-04-24) -- "Because it was There"
+R Under development (unstable) (2026-09-08 r90509) -- "Unsuffered Consequences"
 Copyright (C) 2026 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu
 
@@ -20,7 +20,7 @@ Type 'q()' to quit R.
 > options(digits = 5)
 > 
 > pkgs <- c("free1way.docreg", "survival", "tram")
-> if (!all(sapply(pkgs, require, character.only = TRUE)))
+> if (!all(sapply(pkgs, require, character.only = TRUE, warn.conflicts = FALSE)))
 +     quit()
 Loading required package: free1way.docreg
 Loading required package: survival
@@ -224,4 +224,4 @@ alternative hypothesis: true log-hazard ratio is not equal to 0
 > 
 > proc.time()
    user  system elapsed 
-  1.747   0.087   1.829 
+  2.513   0.088   1.405 

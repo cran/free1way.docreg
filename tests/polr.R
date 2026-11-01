@@ -1,6 +1,6 @@
 
 pkgs <- c("free1way.docreg", "coin", "MASS", "tram")
-if (!all(sapply(pkgs, require, character.only = TRUE)))
+if (!all(sapply(pkgs, require, character.only = TRUE, warn.conflicts = FALSE)))
     quit()
 
 options(digits = 5)

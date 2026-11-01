@@ -1,6 +1,7 @@
 #!/bin/sh
 
-rm -rf libcoin.Rnw
+rm -rf free1way.Rnw
+rm -rf free1way.tex
 
 for f in ./src/*.*o; do
     rm -f $f
@@ -17,6 +18,16 @@ done
 for f in ./man/*~; do
     rm -f $f
 done
+
+for f in ./inst/*~; do
+    rm -f $f
+done
+
+for f in ./vignettes/*~; do
+    rm -f $f
+done
+
+
 
 for f in *~; do
     rm -f $f

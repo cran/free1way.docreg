@@ -1,6 +1,5 @@
 
-library("free1way.docreg")
-
+library("free1way.docreg", warn.conflicts = FALSE)
 ### complete separation
 N <- 5
 w <- gl(2, N)

@@ -1,5 +1,5 @@
 
-R version 4.6.0 (2026-04-24) -- "Because it was There"
+R Under development (unstable) (2026-09-08 r90509) -- "Unsuffered Consequences"
 Copyright (C) 2026 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu
 
@@ -17,7 +17,7 @@ Type 'q()' to quit R.
 
 > 
 > pkgs <- c("free1way.docreg", "rms", "survival")
-> if (!all(sapply(pkgs, require, character.only = TRUE)))
+> if (!all(sapply(pkgs, require, character.only = TRUE, warn.conflicts = FALSE)))
 +     quit()
 Loading required package: free1way.docreg
 Loading required package: rms
@@ -303,6 +303,20 @@ x2 -0.26984  2.379
 attr(,"Attained level")
 [1] 0.9597
 > 
+> ### generate data from linear transformation model with linear predictor
+> ### as offset in rfree1way
+> N <- 500
+> K <- 3
+> P <- 2
+> beta <- c(-1.5, 1.75)
+> X <- matrix(runif(N * K * P), ncol = P)
+> lp <- X %*% beta
+> d <- rfree1way(n = N, delta = c(0, .5), offset = lp)
+> d <- cbind(d, as.data.frame(X))
+> tail(coef(orm(y ~ groups + V1 + V2, data = d)), 4)
+ groups=B  groups=C        V1        V2 
+ 0.083161  0.739656 -1.450663  1.578384 
+> 
 > proc.time()
    user  system elapsed 
-  3.717   0.100   3.830 
+  4.953   0.113   3.882 

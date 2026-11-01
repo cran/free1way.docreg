@@ -1,0 +1,2872 @@
+
+%%% Note: Make Sweave before putting this as a vignette
+%\VignetteIndexEntry{What is Wrong with wilcox.test() in R?}
+%\VignetteDepends{free1way.docreg,ordinalCont,lattice,latticeExtra,MASS,memisc,survival,bibtex}
+%\VignetteKeywords{Area under the ROC Curve, Distribution-free oneway layout, Empirical likelihood,Probabilistic index, Proportional odds model, Stratification, Transformation model}
+%\VignettePackage{free1way.docreg}
+
+
+\documentclass[article,nojss,shortnames]{jss}
+
+\usepackage{booktabs}
+\usepackage{dcolumn}
+
+%%\usepackage{Sweave}
+
+\usepackage[]{graphicx}
+\usepackage[]{xcolor}
+% maxwidth is the original width if it is less than linewidth
+% otherwise use linewidth (to make sure the graphics do not exceed the margin)
+\makeatletter
+\def\maxwidth{ %
+  \ifdim\Gin@nat@width>\linewidth
+    \linewidth
+  \else
+    \Gin@nat@width
+  \fi
+}
+\makeatother
+
+%% packages
+\usepackage[utf8]{inputenc}
+\usepackage{thumbpdf,lmodern}
+\usepackage{xspace}
+% \usepackage{animate}
+
+%% math
+\usepackage{amsfonts,amstext,amsmath,amssymb}
+\usepackage{nicefrac}
+\usepackage{accents} %% load after amsmath
+
+% \usepackage{numprint}
+% \npthousandsep{'}
+% \npdecimalsign{.}
+
+%% bibliography
+\usepackage[sectionbib]{bibunits}
+\defaultbibliographystyle{jss} 
+\defaultbibliography{\Sexpr{gsub("\\.bib", "", system.file("REFERENCES.bib", package = "tram"))},survtram}
+
+%% appendix
+\usepackage[title]{appendix}
+
+%% line numbers
+\usepackage{lineno}
+%\internallinenumbers
+%\setrunninglinenumbers
+%\runninglinenumbers
+
+\renewcommand{\thefootnote}{}
+
+%% tables
+\usepackage{booktabs}
+% \usepackage{float} %% don't reposition tables
+% \usepackage{pdflscape}
+% \usepackage{rotating}
+%%% center by default
+\makeatletter
+\g@addto@macro{\table}{\centering}
+\makeatother
+%%% move caption to bottom
+\usepackage{floatrow} 
+\setlength{\tabcolsep}{12pt}
+
+%% revision
+\let\comment\undefined
+\usepackage[final]{changes}
+
+% \newcommand{\new}[1]{\textcolor{black}{#1}}
+% \newcommand{\rev}[1]{\textcolor{red}{#1}}
+\newcommand{\TODO}[1]{{\color{red} todo: #1}}
+%\newcommand{\COMMENT}[1]{{\color{red} #1}}
+
+\newcommand\Sandra[1]{{\color{blue}Sandra: ``#1''}}
+\newcommand\Torsten[1]{{\color{blue}Torsten: ``#1''}}
+
+%% code
+\usepackage{verbatim}
+\usepackage{alltt}
+\usepackage{paralist}
+
+%% code macros
+% \newcommand{\proglang}[1]{\textsf{#1}}
+% \newcommand{\pkg}[1]{\textbf{#1}}
+\renewcommand{\code}[1]{\texttt{#1()}}
+\newcommand{\var}[1]{\code{#1}}
+\newcommand{\Rcmd}[1]{\texttt{#1}}
+\newcommand{\Rclass}[1]{`\code{#1}'}
+
+%% math macros
+%%% mlt
+
+%% surv
+\newcommand{\sY}{S_\rY}
+\newcommand{\sMEV}[1]{\exp\left\{-\exp\left[#1\right]\right\}}
+\newcommand{\rS}{S}
+\newcommand{\rs}{s}
+\newcommand{\scaleparm}{\gammavec}
+\newcommand{\escaleparm}{\gamma}
+\newcommand{\rF}{A}
+\newcommand{\rf}{a}
+\newcommand{\cureparm}{p}
+\newcommand{\rC}{C}
+\newcommand{\rc}{c}
+\newcommand{\rW}{W}
+\newcommand{\rw}{w}
+\newcommand{\sw}{S_\rw}
+\newcommand{\sYw}{S_\rw}
+\newcommand{\sCw}{G_\rw}
+\newcommand{\indep}{\perp \!\!\! \perp}
+\newcommand{\rA}{\text{Age}}
+\newcommand{\ra}{\text{age}}
+
+%% cholesky
+\newcommand{\lparm}{\xi}
+\newcommand{\mparm}{\lparm}
+
+%% random effects
+\newcommand{\rU}{\mU}
+\newcommand{\ru}{\uvec}
+\newcommand{\reparm}{\rr}
+\def \Sigmavec {\text{\boldmath$\Sigma$}}
+\newcommand{\haz}{\lambda}
+\newcommand{\Haz}{\Lambda}
+\newcommand{\haznul}{\haz_0}
+\newcommand{\hazone}{\haz_1}
+\newcommand{\Haznul}{\Haz_0}
+\newcommand{\hatHaznul}{\hat{\Haz}_0}
+\newcommand{\Hazone}{\Haz_1}
+\newcommand{\sYx}{S_{\rY \mid \rX = \rx}}
+\newcommand{\sYerx}{S_{\rY \mid X = \erx}}
+\newcommand{\snul}{S_{0}}
+\newcommand{\sone}{S_{1}}
+\newcommand{\dnul}{f_{0}}
+\newcommand{\done}{f_{1}}
+\newcommand{\pnul}{F_{0}}
+\newcommand{\pone}{F_{1}}
+
+%% rv
+\newcommand{\rZ}{Z}
+\newcommand{\rY}{Y}
+\newcommand{\rX}{\mX}
+% \newcommand{\rS}{\mS}
+% \newcommand{\rs}{\svec}
+\newcommand{\rr}{\rvec}
+\newcommand{\rz}{z}
+\newcommand{\ry}{y}
+\newcommand{\rx}{\xvec}
+\newcommand{\erx}{x}
+%% sigma algebra
+\newcommand{\sA}{\mathfrak{A}}
+\newcommand{\sAZ}{\mathfrak{B}}
+\newcommand{\sAY}{\mathfrak{C}}
+\newcommand{\esA}{A}
+\newcommand{\esAZ}{B}
+\newcommand{\esAY}{C}
+%% sample spaces
+\newcommand{\sam}{\Omega}
+\newcommand{\samZ}{\RR}
+\newcommand{\samY}{\Xi}
+\newcommand{\samX}{\chi}
+%% measureable spaces
+\newcommand{\ms}{(\sam, \sA)}
+\newcommand{\msZ}{(\samZ, \sAZ)}
+\newcommand{\msY}{(\samY, \sAY)}
+%% probability spaces
+\newcommand{\ps}{(\sam, \sA, \Prob)}
+\newcommand{\psZ}{(\samZ, \sAZ, \Prob_\rZ)}
+\newcommand{\psY}{(\samY, \sAY, \Prob_\rY)}
+%% distributions
+\newcommand{\pZ}{F}
+\newcommand{\pY}{F_\rY}
+\newcommand{\hatpY}{\hat{F}_{\rY,N}}
+\newcommand{\hatpYx}{\hat{F}_{\rY | \rX = \rx, N}}
+\newcommand{\pN}{\Phi}
+\newcommand{\pSL}{F_{\SL}}
+\newcommand{\pMEV}{F_{\MEV}}
+\newcommand{\pSW}{F_{\SW}}
+\newcommand{\pYx}{F_{\rY | \rX = \rx}}
+\newcommand{\pYA}{F_{\rY | \rX = A}}
+\newcommand{\pYB}{F_{\rY | \rX = B}}
+\newcommand{\qZ}{F^{-1}_\rZ}
+\newcommand{\qY}{F^{-1}_\rY}
+\newcommand{\dZ}{f}
+\newcommand{\dY}{f_\rY}
+\newcommand{\hatdY}{\hat{f}_{\rY, N}}
+\newcommand{\dYx}{f_{\rY | \rX = \rx}}
+\newcommand{\hazY}{\lambda_{\rY}}
+\newcommand{\HazY}{\Lambda_{\rY}}
+\newcommand{\hathazY}{\hat{\lambda}_{\rY, N}}
+\newcommand{\hatHazY}{\hat{\Lambda}_{\rY, N}}
+%% measures
+\newcommand{\measureY}{\mu}
+\newcommand{\lebesgue}{\mu_L}
+\newcommand{\counting}{\mu_C}
+%% trafo
+\newcommand{\g}{g}
+\newcommand{\h}{h}
+\newcommand{\s}{\svec}
+\newcommand{\hY}{h_\rY}
+\newcommand{\hx}{h_\rx}
+\newcommand{\hs}{\mathcal{H}}
+\newcommand{\basisy}{\avec}
+\newcommand{\bern}[1]{\avec_{\text{Bs},#1}}
+\newcommand{\bernx}[1]{\bvec_{\text{Bs},#1}}
+\newcommand{\basisx}{\bvec}
+\newcommand{\basisyx}{\cvec}
+\newcommand{\m}{m}
+\newcommand{\lik}{\mathcal{L}}
+\newcommand{\parm}{\varthetavec}
+\newcommand{\eparm}{\vartheta}
+\newcommand{\dimparm}{P}
+\newcommand{\dimparmx}{Q}
+\newcommand{\shiftparm}{\betavec}
+\newcommand{\baseparm}{\alphavec}
+\newcommand{\eshiftparm}{\delta}
+
+\newcommand{\ie}{\textit{i.e.,}}
+\newcommand{\eg}{\textit{e.g.,}}
+
+\renewcommand{\Prob}{\mathbb{P}}
+\newcommand{\Ex}{\mathbb{E}}
+\newcommand{\RR}{\mathbb{R}}
+\newcommand{\eps}{\varepsilon}
+\newcommand{\prodname}{tensor }
+\newcommand{\Null}{\mathbf{0}}
+\newcommand{\FI}{\mI}
+\newcommand{\eFI}{I}
+
+\usepackage{dsfont}
+\newcommand{\I}{\mathds{1}}
+
+
+
+\def \dsP {\text{$\mathds{P}$}}
+\def \dsE {\text{$\mathds{E}$}}
+\def \dsR {\text{$\mathds{R}$}}
+\def \dsN {\text{$\mathds{N}$}}
+
+
+% Math Operators
+
+ \DeclareMathOperator{\logit}{logit}
+ \DeclareMathOperator{\loglog}{loglog}
+ \DeclareMathOperator{\cloglog}{cloglog}
+ \DeclareMathOperator{\probit}{probit}
+ \DeclareMathOperator{\LRT}{LRT}
+ \DeclareMathOperator{\RLRT}{RLRT}
+ \DeclareMathOperator{\Cov}{Cov}
+ \DeclareMathOperator{\Cor}{Cor}
+ \DeclareMathOperator{\Var}{Var}
+ \DeclareMathOperator{\EW}{\dsE}
+ \DeclareMathOperator{\D}{D}
+ \DeclareMathOperator{\Bias}{Bias}
+ \DeclareMathOperator{\MSE}{MSE}
+ \DeclareMathOperator{\PLS}{PLS}
+ \DeclareMathOperator{\rank}{rank}
+ \DeclareMathOperator{\ncol}{ncol}
+ \DeclareMathOperator{\pen}{pen}
+ \DeclareMathOperator{\const}{const}
+ \DeclareMathOperator{\diag}{diag}
+ \DeclareMathOperator{\blockdiag}{blockdiag}
+ \DeclareMathOperator{\df}{df}
+ \DeclareMathOperator{\trace}{tr}
+ \DeclareMathOperator{\iid}{i.i.d.}
+ \DeclareMathOperator{\ind}{ind.}
+ \DeclareMathOperator{\obs}{obs}
+ \DeclareMathOperator{\acos}{acos}
+ \DeclareMathOperator{\spat}{spat}
+ \DeclareMathOperator{\fix}{{fix}}
+ \DeclareMathOperator{\ran}{{ran}}
+ \DeclareMathOperator*{\argmin}{{arg\,min}}
+ \DeclareMathOperator*{\argmax}{{arg\,max}}
+ \DeclareMathOperator{\BIC}{{BIC}}
+ \DeclareMathOperator{\DIC}{{DIC}}
+ \DeclareMathOperator{\AIC}{{AIC}}
+ \DeclareMathOperator{\mAIC}{{mAIC}}
+ \DeclareMathOperator{\cAIC}{{cAIC}}
+
+% Distributions
+
+ \DeclareMathOperator{\WD}{Wei}
+ \DeclareMathOperator{\ND}{N}
+ \DeclareMathOperator{\TND}{TN}
+ \DeclareMathOperator{\UD}{U}
+ \DeclareMathOperator{\GaD}{Ga}
+ \DeclareMathOperator{\tD}{t}
+ \DeclareMathOperator{\IGD}{IG}
+ \DeclareMathOperator{\IWD}{IW}
+ \DeclareMathOperator{\PoD}{Po}
+ \DeclareMathOperator{\ExpD}{Exp}
+ \DeclareMathOperator{\LapD}{Lap}
+ \DeclareMathOperator{\MuD}{Mu}
+ \DeclareMathOperator{\DirD}{Dir}
+ \DeclareMathOperator{\PDD}{PD}
+ \DeclareMathOperator{\BeD}{Be}
+ \DeclareMathOperator{\BD}{B}
+ \DeclareMathOperator{\DPD}{DP}
+ \DeclareMathOperator{\KSD}{KS}
+ \DeclareMathOperator{\SL}{SL}
+ \DeclareMathOperator{\MEV}{MEV}
+ \DeclareMathOperator{\SW}{SW}
+%% \DeclareMathOperator{\Chi1}{\chi^2_1}
+
+
+
+% Boldface vectors and matrices
+
+\def \avec {\text{\boldmath$a$}}    \def \mA {\text{\boldmath$A$}}
+\def \bvec {\text{\boldmath$b$}}    \def \mB {\text{\boldmath$B$}}
+\def \cvec {\text{\boldmath$c$}}    \def \mC {\text{\boldmath$C$}}
+\def \dvec {\text{\boldmath$d$}}    \def \mD {\text{\boldmath$D$}}
+\def \evec {\text{\boldmath$e$}}    \def \mE {\text{\boldmath$E$}}
+\def \fvec {\text{\boldmath$f$}}    \def \mF {\text{\boldmath$F$}}
+\def \gvec {\text{\boldmath$g$}}    \def \mG {\text{\boldmath$G$}}
+\def \hvec {\text{\boldmath$h$}}    \def \mH {\text{\boldmath$H$}}
+\def \ivec {\text{\boldmath$i$}}    \def \mI {\text{\boldmath$I$}}
+\def \jvec {\text{\boldmath$j$}}    \def \mJ {\text{\boldmath$J$}}
+\def \kvec {\text{\boldmath$k$}}    \def \mK {\text{\boldmath$K$}}
+\def \lvec {\text{\boldmath$l$}}    \def \mL {\text{\boldmath$L$}}
+\def \mvec {\text{\boldmath$m$}}    \def \mM {\text{\boldmath$M$}}
+\def \nvec {\text{\boldmath$n$}}    \def \mN {\text{\boldmath$N$}}
+\def \ovec {\text{\boldmath$o$}}    \def \mO {\text{\boldmath$O$}}
+\def \pvec {\text{\boldmath$p$}}    \def \mP {\text{\boldmath$P$}}
+\def \qvec {\text{\boldmath$q$}}    \def \mQ {\text{\boldmath$Q$}}
+\def \rvec {\text{\boldmath$r$}}    \def \mR {\text{\boldmath$R$}}
+\def \svec {\text{\boldmath$s$}}    \def \mS {\text{\boldmath$S$}}
+\def \tvec {\text{\boldmath$t$}}    \def \mT {\text{\boldmath$T$}}
+\def \uvec {\text{\boldmath$u$}}    \def \mU {\text{\boldmath$U$}}
+\def \vvec {\text{\boldmath$v$}}    \def \mV {\text{\boldmath$V$}}
+\def \wvec {\text{\boldmath$w$}}    \def \mW {\text{\boldmath$W$}}
+\def \xvec {\text{\boldmath$x$}}    \def \mX {\text{\boldmath$X$}}
+\def \yvec {\text{\boldmath$y$}}    \def \mY {\text{\boldmath$Y$}}
+\def \zvec {\text{\boldmath$z$}}    \def \mZ {\text{\boldmath$Z$}}
+
+ \def \calA {\mathcal A}
+ \def \calB {\mathcal B}
+ \def \calC {\mathcal C}
+ \def \calD {\mathcal D}
+ \def \calE {\mathcal E}
+ \def \calF {\mathcal F}
+ \def \calG {\mathcal G}
+ \def \calH {\mathcal H}
+ \def \calI {\mathcal I}
+ \def \calJ {\mathcal J}
+ \def \calK {\mathcal K}
+ \def \calL {\mathcal L}
+ \def \calM {\mathcal M}
+ \def \calN {\mathcal N}
+ \def \calO {\mathcal O}
+ \def \calP {\mathcal P}
+ \def \calQ {\mathcal Q}
+ \def \calR {\mathcal R}
+ \def \calS {\mathcal S}
+ \def \calT {\mathcal T}
+ \def \calU {\mathcal U}
+ \def \calV {\mathcal V}
+ \def \calW {\mathcal W}
+ \def \calX {\mathcal X}
+ \def \calY {\mathcal Y}
+ \def \calZ {\mathcal Z}
+
+\def \ahatvec {\text{\boldmath$\hat a$}}    \def \mhatA {\text{\boldmath$\hat A$}}
+\def \bhatvec {\text{\boldmath$\hat b$}}    \def \mhatB {\text{\boldmath$\hat B$}}
+\def \chatvec {\text{\boldmath$\hat c$}}    \def \mhatC {\text{\boldmath$\hat C$}}
+\def \dhatvec {\text{\boldmath$\hat d$}}    \def \mhatD {\text{\boldmath$\hat D$}}
+\def \ehatvec {\text{\boldmath$\hat e$}}    \def \mhatE {\text{\boldmath$\hat E$}}
+\def \fhatvec {\text{\boldmath$\hat f$}}    \def \mhatF {\text{\boldmath$\hat F$}}
+\def \ghatvec {\text{\boldmath$\hat g$}}    \def \mhatG {\text{\boldmath$\hat G$}}
+\def \hhatvec {\text{\boldmath$\hat h$}}    \def \mhatH {\text{\boldmath$\hat H$}}
+\def \ihatvec {\text{\boldmath$\hat i$}}    \def \mhatI {\text{\boldmath$\hat I$}}
+\def \jhatvec {\text{\boldmath$\hat j$}}    \def \mhatJ {\text{\boldmath$\hat J$}}
+\def \khatvec {\text{\boldmath$\hat k$}}    \def \mhatK {\text{\boldmath$\hat K$}}
+\def \lhatvec {\text{\boldmath$\hat l$}}    \def \mhatL {\text{\boldmath$\hat L$}}
+\def \mhatvec {\text{\boldmath$\hat m$}}    \def \mhatM {\text{\boldmath$\hat M$}}
+\def \nhatvec {\text{\boldmath$\hat n$}}    \def \mhatN {\text{\boldmath$\hat N$}}
+\def \ohatvec {\text{\boldmath$\hat o$}}    \def \mhatO {\text{\boldmath$\hat O$}}
+\def \phatvec {\text{\boldmath$\hat p$}}    \def \mhatP {\text{\boldmath$\hat P$}}
+\def \qhatvec {\text{\boldmath$\hat q$}}    \def \mhatQ {\text{\boldmath$\hat Q$}}
+\def \rhatvec {\text{\boldmath$\hat r$}}    \def \mhatR {\text{\boldmath$\hat R$}}
+\def \shatvec {\text{\boldmath$\hat s$}}    \def \mhatS {\text{\boldmath$\hat S$}}
+\def \thatvec {\text{\boldmath$\hat t$}}    \def \mhatT {\text{\boldmath$\hat T$}}
+\def \uhatvec {\text{\boldmath$\hat u$}}    \def \mhatU {\text{\boldmath$\hat U$}}
+\def \vhatvec {\text{\boldmath$\hat v$}}    \def \mhatV {\text{\boldmath$\hat V$}}
+\def \whatvec {\text{\boldmath$\hat w$}}    \def \mhatW {\text{\boldmath$\hat W$}}
+\def \xhatvec {\text{\boldmath$\hat x$}}    \def \mhatX {\text{\boldmath$\hat X$}}
+\def \yhatvec {\text{\boldmath$\hat y$}}    \def \mhatY {\text{\boldmath$\hat Y$}}
+\def \zhatvec {\text{\boldmath$\hat z$}}    \def \mhatZ {\text{\boldmath$\hat Z$}}
+
+
+\def \atildevec {\text{\boldmath$\tilde a$}}    \def \mtildeA {\text{\boldmath$\tilde A$}}
+\def \btildevec {\text{\boldmath$\tilde b$}}    \def \mtildeB {\text{\boldmath$\tilde B$}}
+\def \ctildevec {\text{\boldmath$\tilde c$}}    \def \mtildeC {\text{\boldmath$\tilde C$}}
+\def \dtildevec {\text{\boldmath$\tilde d$}}    \def \mtildeD {\text{\boldmath$\tilde D$}}
+\def \etildevec {\text{\boldmath$\tilde e$}}    \def \mtildeE {\text{\boldmath$\tilde E$}}
+\def \ftildevec {\text{\boldmath$\tilde f$}}    \def \mtildeF {\text{\boldmath$\tilde F$}}
+\def \gtildevec {\text{\boldmath$\tilde g$}}    \def \mtildeG {\text{\boldmath$\tilde G$}}
+\def \htildevec {\text{\boldmath$\tilde h$}}    \def \mtildeH {\text{\boldmath$\tilde H$}}
+\def \itildevec {\text{\boldmath$\tilde i$}}    \def \mtildeI {\text{\boldmath$\tilde I$}}
+\def \jtildevec {\text{\boldmath$\tilde j$}}    \def \mtildeJ {\text{\boldmath$\tilde J$}}
+\def \ktildevec {\text{\boldmath$\tilde k$}}    \def \mtildeK {\text{\boldmath$\tilde K$}}
+\def \ltildevec {\text{\boldmath$\tilde l$}}    \def \mtildeL {\text{\boldmath$\tilde L$}}
+\def \mtildevec {\text{\boldmath$\tilde m$}}    \def \mtildeM {\text{\boldmath$\tilde M$}}
+\def \ntildevec {\text{\boldmath$\tilde n$}}    \def \mtildeN {\text{\boldmath$\tilde N$}}
+\def \otildevec {\text{\boldmath$\tilde o$}}    \def \mtildeO {\text{\boldmath$\tilde O$}}
+\def \ptildevec {\text{\boldmath$\tilde p$}}    \def \mtildeP {\text{\boldmath$\tilde P$}}
+\def \qtildevec {\text{\boldmath$\tilde q$}}    \def \mtildeQ {\text{\boldmath$\tilde Q$}}
+\def \rtildevec {\text{\boldmath$\tilde r$}}    \def \mtildeR {\text{\boldmath$\tilde R$}}
+\def \stildevec {\text{\boldmath$\tilde s$}}    \def \mtildeS {\text{\boldmath$\tilde S$}}
+\def \ttildevec {\text{\boldmath$\tilde t$}}    \def \mtildeT {\text{\boldmath$\tilde T$}}
+\def \utildevec {\text{\boldmath$\tilde u$}}    \def \mtildeU {\text{\boldmath$\tilde U$}}
+\def \vtildevec {\text{\boldmath$\tilde v$}}    \def \mtildeV {\text{\boldmath$\tilde V$}}
+\def \wtildevec {\text{\boldmath$\tilde w$}}    \def \mtildeW {\text{\boldmath$\tilde W$}}
+\def \xtildevec {\text{\boldmath$\tilde x$}}    \def \mtildeX {\text{\boldmath$\tilde X$}}
+\def \ytildevec {\text{\boldmath$\tilde y$}}    \def \mtildeY {\text{\boldmath$\tilde Y$}}
+\def \ztildevec {\text{\boldmath$\tilde z$}}    \def \mtildeZ {\text{\boldmath$\tilde Z$}}
+
+\def \alphavec        {\text{\boldmath$\alpha$}}
+\def \betavec         {\text{\boldmath$\beta$}}
+\def \gammavec        {\text{\boldmath$\gamma$}}
+\def \deltavec        {\text{\boldmath$\delta$}}
+\def \epsilonvec      {\text{\boldmath$\epsilon$}}
+\def \varepsilonvec   {\text{\boldmath$\varepsilon$}}
+\def \zetavec         {\text{\boldmath$\zeta$}}
+\def \etavec          {\text{\boldmath$\eta$}}
+\def \thetavec        {\text{\boldmath$\theta$}}
+\def \varthetavec     {\text{\boldmath$\vartheta$}}
+\def \iotavec         {\text{\boldmath$\iota$}}
+\def \kappavec        {\text{\boldmath$\kappa$}}
+\def \lambdavec       {\text{\boldmath$\lambda$}}
+\def \muvec           {\text{\boldmath$\mu$}}
+\def \nuvec           {\text{\boldmath$\nu$}}
+\def \xivec           {\text{\boldmath$\xi$}}
+\def \pivec           {\text{\boldmath$\pi$}}
+\def \varpivec        {\text{\boldmath$\varpi$}}
+\def \rhovec          {\text{\boldmath$\rho$}}
+\def \varrhovec       {\text{\boldmath$\varrho$}}
+\def \sigmavec        {\text{\boldmath$\sigma$}}
+\def \varsigmavec     {\text{\boldmath$\varsigma$}}
+\def \tauvec          {\text{\boldmath$\tau$}}
+\def \upsilonvec      {\text{\boldmath$\upsilon$}}
+\def \phivec          {\text{\boldmath$\phi$}}
+\def \varphivec       {\text{\boldmath$\varphi$}}
+\def \psivec          {\text{\boldmath$\psi$}}
+\def \chivec          {\text{\boldmath$\chi$}}
+\def \omegavec        {\text{\boldmath$\omega$}}
+
+\def \alphahatvec        {\text{\boldmath$\hat \alpha$}}
+\def \betahatvec         {\text{\boldmath$\hat \beta$}}
+\def \gammahatvec        {\text{\boldmath$\hat \gamma$}}
+\def \deltahatvec        {\text{\boldmath$\hat \delta$}}
+\def \epsilonhatvec      {\text{\boldmath$\hat \epsilon$}}
+\def \varepsilonhatvec   {\text{\boldmath$\hat \varepsilon$}}
+\def \zetahatvec         {\text{\boldmath$\hat \zeta$}}
+\def \etahatvec          {\text{\boldmath$\hat \eta$}}
+\def \thetahatvec        {\text{\boldmath$\hat \theta$}}
+\def \varthetahatvec     {\text{\boldmath$\hat \vartheta$}}
+\def \iotahatvec         {\text{\boldmath$\hat \iota$}}
+\def \kappahatvec        {\text{\boldmath$\hat \kappa$}}
+\def \lambdahatvec       {\text{\boldmath$\hat \lambda$}}
+\def \muhatvec           {\text{\boldmath$\hat \mu$}}
+\def \nuhatvec           {\text{\boldmath$\hat \nu$}}
+\def \xihatvec           {\text{\boldmath$\hat \xi$}}
+\def \pihatvec           {\text{\boldmath$\hat \pi$}}
+\def \varpihatvec        {\text{\boldmath$\hat \varpi$}}
+\def \rhohatvec          {\text{\boldmath$\hat \rho$}}
+\def \varrhohatvec       {\text{\boldmath$\hat \varrho$}}
+\def \sigmahatvec        {\text{\boldmath$\hat \sigma$}}
+\def \varsigmahatvec     {\text{\boldmath$\hat \varsigma$}}
+\def \tauhatvec          {\text{\boldmath$\hat \tau$}}
+\def \upsilonhatvec      {\text{\boldmath$\hat \upsilon$}}
+\def \phihatvec          {\text{\boldmath$\hat \phi$}}
+\def \varphihatvec       {\text{\boldmath$\hat \varphi$}}
+\def \psihatvec          {\text{\boldmath$\hat \psi$}}
+\def \chihatvec          {\text{\boldmath$\hat \chi$}}
+\def \omegahatvec        {\text{\boldmath$\hat \omega$}}
+
+\def \alphatildevec        {\text{\boldmath$\tilde \alpha$}}
+\def \betatildevec         {\text{\boldmath$\tilde \beta$}}
+\def \gammatildevec        {\text{\boldmath$\tilde \gamma$}}
+\def \deltatildevec        {\text{\boldmath$\tilde \delta$}}
+\def \epsilontildevec      {\text{\boldmath$\tilde \epsilon$}}
+\def \varepsilontildevec   {\text{\boldmath$\tilde \varepsilon$}}
+\def \zetatildevec         {\text{\boldmath$\tilde \zeta$}}
+\def \etatildevec          {\text{\boldmath$\tilde \eta$}}
+\def \thetatildevec        {\text{\boldmath$\tilde \theta$}}
+\def \varthetatildevec     {\text{\boldmath$\tilde \vartheta$}}
+\def \iotatildevec         {\text{\boldmath$\tilde \iota$}}
+\def \kappatildevec        {\text{\boldmath$\tilde \kappa$}}
+\def \lambdatildevec       {\text{\boldmath$\tilde \lambda$}}
+\def \mutildevec           {\text{\boldmath$\tilde \mu$}}
+\def \nutildevec           {\text{\boldmath$\tilde \nu$}}
+\def \xitildevec           {\text{\boldmath$\tilde \xi$}}
+\def \pitildevec           {\text{\boldmath$\tilde \pi$}}
+\def \varpitildevec        {\text{\boldmath$\tilde \varpi$}}
+\def \rhotildevec          {\text{\boldmath$\tilde \rho$}}
+\def \varrhotildevec       {\text{\boldmath$\tilde \varrho$}}
+\def \sigmatildevec        {\text{\boldmath$\tilde \sigma$}}
+\def \varsigmatildevec     {\text{\boldmath$\tilde \varsigma$}}
+\def \tautildevec          {\text{\boldmath$\tilde \tau$}}
+\def \upsilontildevec      {\text{\boldmath$\tilde \upsilon$}}
+\def \phitildevec          {\text{\boldmath$\tilde \phi$}}
+\def \varphitildevec       {\text{\boldmath$\tilde \varphi$}}
+\def \psitildevec          {\text{\boldmath$\tilde \psi$}}
+\def \chitildevec          {\text{\boldmath$\tilde \chi$}}
+\def \omegatildevec        {\text{\boldmath$\tilde \omega$}}
+
+\def \mGamma   {\mathbf{\Gamma}}
+\def \mDelta   {\mathbf{\Delta}}
+\def \mTheta   {\mathbf{\Theta}}
+\def \mLambda  {\mathbf{\Lambda}}
+\def \mXi      {\mathbf{\Xi}}
+\def \mPi      {\mathbf{\Pi}}
+\def \mSigma   {\mathbf{\Sigma}}
+\def \mUpsilon {\mathbf{\Upsilon}}
+\def \mPhi     {\mathbf{\Phi}}
+\def \mPsi     {\mathbf{\Psi}}
+\def \mOmega   {\mathbf{\Omega}}
+
+\def \mhatGamma   {\mathbf{\hat \Gamma}}
+\def \mhatDelta   {\mathbf{\hat \Delta}}
+\def \mhatTheta   {\mathbf{\hat \Theta}}
+\def \mhatLambda  {\mathbf{\hat \Lambda}}
+\def \mhatXi      {\mathbf{\hat \Xi}}
+\def \mhatPi      {\mathbf{\hat \Pi}}
+\def \mhatSigma   {\mathbf{\hat \Sigma}}
+\def \mhatUpsilon {\mathbf{\hat \Upsilon}}
+\def \mhatPhi     {\mathbf{\hat \Phi}}
+\def \mhatPsi     {\mathbf{\hat \Psi}}
+\def \mhatOmega   {\mathbf{\hat \Omega}}
+
+\def \nullvec {\mathbf{0}}
+\def \onevec {\mathbf{1}}
+
+%%% theorems
+\newtheorem{lem}{Lemma}
+\newtheorem{thm}{Theorem}
+\newtheorem{coro}{Corollary}
+\newtheorem{defn}{Definition}
+% \newtheorem{remark}{Remark}
+
+\def \thetavec        {\text{\boldmath$\theta$}}
+\newcommand{\rT}{G}
+\newcommand{\rt}{g}
+
+\newcommand{\ubar}[1]{\underaccent{\bar}{#1}}
+
+% \newcommand{\Prob}{\text{Prob}} %% already defined
+
+\newcommand{\expit}{\text{expit}}
+
+
+%% colors
+\definecolor{Red}{rgb}{0.5,0,0}
+\definecolor{Blue}{rgb}{0,0,0.5}
+
+\author{Torsten Hothorn \\ Universit\"at Z\"urich \\
+   \And Kurt Hornik \\ Wirtschaftsuniversit\"at Wien}
+\Plainauthor{Hothorn and Hornik}
+
+\title{What is Wrong with \code{wilcox.test} in \proglang{R}?}
+\Plaintitle{What is Wrong with stats::wilcox.test() in R?}
+\Shorttitle{Distribution-free Stratified $K$-sample Oneway Layout}
+
+\Keywords{Area under the ROC curve, Distribution-free oneway layout, Empirical likelihood,
+Probabilistic index, Proportional odds model, Stratification, Transformation model}
+\Plainkeywords{Area under the ROC Curve, Distribution-free oneway layout, Empirical likelihood,
+Probabilistic index, Proportional odds model, Stratification, Transformation model}
+
+\Address{
+  Torsten Hothorn\\
+  Institut f\"ur Epidemiologie, Biostatistik und Pr\"avention \\
+  Universit\"at Z\"urich \\
+  Hirschengraben 84, CH-8001 Z\"urich, Switzerland \\
+  \texttt{Torsten.Hothorn@R-project.org} \\
+
+  Kurt Hornik \\
+  Institute for Statistics and Mathematics \\
+  Department of Finance, Accounting and Statistics  \\
+  Wirtschaftsuniversit\"at Wien, Welthandelsplatz 1, AT-1020 Wien, Austria  \\
+  \texttt{Kurt.Hornik@R-project.org}
+}
+
+ 
+\Abstract{
+We discuss some conceptual issues with the location shift parameterisation
+underlying parameter and interval estimation in \code{wilcox.test},
+especially for bounded or ordinal response variables.  Looking at other
+\code{*.test} functions in package \pkg{stats}, we highlight established and
+missing links between models and procedures and discuss why diagnostic tools
+for model assessment and tools for power evaluation and sample size planning
+have been lacking from \pkg{stats} so far.
+
+Reiterating the, unfortunately not widely known, fact that the
+Wilcoxon-Mann-Whitney Rank Sum statistic can be understood as the empirical
+score statistic in a proportional odds model, we motivate alternative
+parameterisations for the Wilcoxon and other linear rank tests where the
+location shift is not defined on the scale of the response but on some
+function of the distribution itself.  Many known and novel models,
+parameters, and corresponding test and inference procedures arise, such as
+log-hazard ratios in proportional hazard models, Lehmann alternatives, or a
+generalised version of Cohen's $d$ corresponding to the van der Waerden
+normal scores test.
+
+A unified implementation for empirical maximum likelihood estimation and
+inference in this framework is provided through the novel
+\code{stats::free1way} function added to the \pkg{stats} package 
+in \proglang{R} 4.6.0, along with functionality for model
+diagnostics and power assessment.  The application of these tools is
+described and illustrated by means of a series of novel analyses of data
+originating from a randomised trial evaluating neck pain reduction by laser
+therapy.
+
+}
+
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\begin{document}
+
+%%
+<<packages, echo = FALSE, results = hide, message = FALSE, warning = FALSE>>=
+pkgs <- c("free1way.docreg", "ordinalCont", "lattice", "latticeExtra", 
+          "MASS", "memisc", "survival", "bibtex")
+OK <- sapply(pkgs, require, character.only = TRUE)
+if (!all(OK)) {
+    install.packages(pkgs[!OK])
+    OK <- sapply(pkgs, require, character.only = TRUE)
+    if (!all(OK))
+        stop("package(s) ", paste(pkgs[!OK], collapse = ", "), " not available")
+}
+set.seed(290875)
+options(prompt = "R> ", continue = "+  ", width = 70, 
+        useFancyQuotes = FALSE, digits = 6)
+@
+%%
+
+%%
+<<tools, echo = FALSE>>=
+## some helper functions
+frmt1 <- function(x, digits = 1) {
+    if (!is.numeric(x)) return(x)
+    formatC(round(x, digits = digits), digits = digits, format = "f") 
+}
+frmt3 <- function(x) 
+    frmt1(x, digits = 3)
+frmtci <- function(x, digits = 3) {
+    if (!is.numeric(x)) return(x)
+    if (length(x) != 2) stop("not a confidence interval")
+    return(paste("(", frmt1(x[1], digits = digits), 
+                 ",", frmt1(x[2], digits = digits), ")"))
+}
+@
+%%
+
+%%
+<<pain, echo = FALSE>>=
+pain_df <- neck_pain
+idt <- xtabs(~ id, data = pain_df)
+miss <- names(idt)[idt < 3]
+#pain_df <- subset(pain_df, !id %in% miss)
+#pain_df$id <- factor(pain_df$id)
+levels(pain_df$laser) <- c("Placebo", "Active")
+levels(pain_df$time) <- c("Baseline", "7 weeks", "12 weeks")
+pain <- rbind(subset(pain_df, laser == levels(pain_df$laser)[1]),
+              subset(pain_df, laser == levels(pain_df$laser)[2]))
+ties12 <- sum(duplicated(subset(pain, time == "12 weeks")$vas))
+pain$vasB <- cut(pain$vas, breaks = c(-Inf, .6, Inf), 
+                 ordered_result = FALSE, 
+                 labels = c("None to moderate", "(Moderately) severe"))
+cols <- trellis.par.get("superpose.line")$col[1:2]
+names(cols) <- levels(pain$laser)
+@
+%%
+
+
+\section{Introduction}
+
+The history of statistical methodology over the last two centuries can be
+told as a tale of powerful and ingeniously simple ideas being overshadowed
+by simplistic yet computable, and thus practically applicable,
+approximations.  The replacement of Laplace' least absolute differences by
+Gau{\ss}' least squares buried median, or more generally, quantile and
+distribution regression under the normal linear regression tombstone for
+$150$ years \citep{Portnoy_1997}.  Fisher's definition of the likelihood as a quantity being
+proportional to the \emph{probability} of the data under a given model
+remains invisible when we introduce a log-likelihood as a log-density to
+students.  Although the core ideas had been developed by Erich Lehmann, John
+Tukey, George Box, and Sir David Cox during the two decades preceding
+generalised linear models (GLMs), transformation models featuring
+data-driven response transformations in addition to interpretable covariate
+effects on latent scales never gained the same popularity as GLMs, maybe
+except for the proportional hazards model and its replacement of the full by
+the partial likelihood.  These three examples are just the tip of the
+iceberg, and some parts of contemporary methodological research can be
+understood as an attempt to excavate the origins.
+
+This history still haunts us today, in research, teaching, and everyday
+practice, and its fall-out is hard-wired into software, for example into the
+\pkg{stats} package \citep{R}.  Focusing on the suite of classical tests, we hope that
+diligent students first looking at the \pkg{stats} documentation will ask
+questions like ``Why does \code{wilcox.test} report $p$-values and parameter
+estimates when the latter are missing in \code{kruskal.test} and
+\code{friedman.test}?'', ``Why are odds ratios in \code{mantelhaen.test}
+only available for stratified $2 \times 2$ tables?'', ``Why can't
+\code{wilcox.test} handle ordered or censored outcomes?'', ``Why are blocks
+or strata not allowed in \code{wilcox.test} or \code{kruskal.test}?'', or
+``Why is \code{power.wilcox.test} missing?''.
+
+We provide a new look at many of the \code{*.test} functions in the
+\pkg{stats} package through the lens of semiparametrically efficient
+population- and permutation-based inference in distribution-free stratified
+$K$-sample oneway layouts, whose core ideas are strongly connected to the
+transformation models mentioned above.  The most prominent member of this
+model family is the Wilcoxon-Mann-Whitney two-sample rank sum test
+\citep[][we use the term ``Wilcoxon test'' hereafter]{Wilcoxon_1945,Mann_Whitney_1947}.  
+We will concentrate on this
+test for the comparison of two parallel groups, developed independently by a
+number of researchers \citep{Kruskal1957}, and its implementation in
+\code{wilcox.test} as our prime example and will provide explanations for
+its limitations and introduce a more holistic and model-based understanding
+aiming to address the conceptual and practical questions in a framework
+including, but not being limited to, \code{wilcox.test}.  The new
+\code{free1way} function, added to the \pkg{stats} package in \proglang{R}
+4.6.0 published 2026-04-24, leverages modern computational tools for a
+general and reasonably fast implementation of a broad model family.
+
+
+\begin{figure}[ht!]
+\begin{center}
+%%
+<<Bauer, height = 5, echo = FALSE, fig = TRUE>>=
+Bauer <- matrix(c(
+2025,	63,
+2024,	58,
+2023,	54,
+2022,	60,
+2021,	50,
+2020,	34,
+2019,	41,
+2018,	41,
+2017,	32,
+2016,	33,
+2015,	20,
+2014,	19,
+2013,	16,
+2012,	11,
+2011,	16,
+2010,	11,
+2009,	14,
+2008,	2,
+2007,	2,
+2006,	2,
+2005,	2,
+2003,	1,
+2002,	1,
+2001,	1,
+1997,	3,
+1996,	2,
+1995,	1,
+1992,	2,
+1991,	2,
+1990,	1,
+1989,	1,
+1988,	2,
+1985,	1,
+1982,	1,
+1981,	1,
+1980,	1,
+1976,	3,
+1974,	1,
+1973,	1), byrow = TRUE, ncol = 2)
+Bauer <- Bauer[order(Bauer[,1]),]
+yrs <- Bauer[,1]
+x <- Bauer[,2]
+pre2000 <- sum(x[yrs < 2000])
+plot(yrs, cumsum(x), type = "s", xlab = "Year Published",
+     ylab = "Cumulative Number of Citations", las = 1, xlim = c(1970, max(yrs) + 1))
+arrows(2000.5, sum(x) / 3, 2000.5, 28, length = .15)
+text(2000.5, sum(x) / 3 + 55, "R 1.1.0 implements 
+wilcox.test(,conf.int = TRUE)")
+arrows(1972, sum(x) / 3, 1972, 5, length = .15)
+text(1972, sum(x) / 3, "Publication", pos = 4)
+@
+%%
+\caption{Cumulative number of citations of rank-based confidence intervals
+for a location shift \citep{Bauer_1972} from 1972 to 2025. Data downloaded from 
+Web of Science (\url{https://www.webofscience.com}) 2026-06-08.}
+\label{fig:Bauer}
+\end{center}
+\end{figure}
+
+
+The Wilcoxon test is often advertised as an nonparametric alternative to the
+two-sample $t$-test.  In this line of thinking the replacement of confidence
+intervals for the difference of means by confidence intervals for a location
+shift seems to make sense.  In \proglang{R}, the Wilcoxon test is
+implemented in \code{wilcox.test} with the option to compute confidence
+intervals for such a parameter using the procedure proposed by
+\cite{Bauer_1972} along with the Hodges-Lehmann estimate of a location
+shift.  The authors of this article implemented these confidence intervals
+early in 2000, and the method became publically available in
+\code{wilcox.test} as part of \proglang{R} 1.1.0, published 2000-06-15.  The
+impact of the authors' choice to implement confidence intervals for a
+location shift in \code{wilcox.test} is visible in the citation history of
+the original \cite{Bauer_1972} paper (Figure~\ref{fig:Bauer}).  All
+$\Sexpr{pre2000}$ citations before 2000 were from methodological papers in
+statistics journals.  The method was only applied in empirical research in
+ecology, biochemistry, genetics, pharmacology, zoology and other fields
+after the implementation in \code{wilcox.test} was published in \proglang{R}
+1.1.0.
+
+While the method and its implementation are technically correct, presenting
+confidence intervals for a location shift in the output of
+\code{wilcox.test} seems suboptimal in hindsight, because the Wilcoxon test
+cannot be motivated as a test against shift alternatives \citep[][and
+others]{Conroy_2012,Divine_Norton_Baron_2018,Fong_Huang_2019,Parker_Jernigan_Lansky_2020}. 
+In fact, the Wilcoxon test is the nonparametric or empirical score test for
+a log-odds ratio in a semiparametric transformation model.  Although the
+connection between the Wilcoxon test and proportional odds models has been
+discovered decades ago \citep{Whitehead1993} and is mentioned in prominent
+textbooks \citep{Harrell2015RMS}, the details for absolutely continuous
+outcomes have been worked out only more recently
+\citep{Wang_Tian_2017,Liu_Shepherd_Li_2017}.  In this sense, the rank sum
+statistic proposed by \cite{Wilcoxon_1945} in absence of an underlying
+probabilistic model later turned out to coincide with the score statistic in
+the well-defined proportional odds model, first described 35 years later
+\citep[by][but yet without making the connection]{McCullagh_1980}.  In this
+sense, the Wilcoxon test is not one of the simplistic approximations cited
+above but the real thing.  However, with its implementation being
+overshadowed by a simplistic location shift model, \code{wilcox.test} cannot
+leverage the full capacity of the proportional odds model for estimation and
+inference.  With a fully specified matching probabilistic model in place, it
+makes sense to estimate the parameters of this model by optimising some
+appropriate likelihood function followed by likelihood-based inference
+procedures for the relevant parameters.  The novel \code{free1way} function
+does exactly this, in a model family not only featuring log-odds ratios and
+corresponding Wilcoxon tests, but also log-hazard ratios (Savage- or logrank
+tests), log-reverse time hazard ratios \citep[tests against a Lehmann
+alternative,][]{Lehmann:1953}, and a variant of Cohen's $d$ (van der Waerden
+test), also in stratified designs.  In addition to parameter estimates,
+tests, and confidence intervals in \code{free1way}, tools for model diagnostics by means of
+probability-probability plots and for sample size planning became available
+in \proglang{R} 4.6.0.
+
+We proceed by introducing randomised clinical trial data we will use as a
+motivation and for illustrating concepts and user interfaces throughout this
+article.  Starting with the special case of proportional odds models, and
+thus Wilcoxon tests, we explain how the model is parameterised and the core
+concepts of maximum likelihood inference in this special case.  Following a
+reanalysis of the clinical trial, we generalise the framework to other
+treatment effects covered by \code{free1way}.
+
+
+\section{Low-level Laser Therapy Against Neck Pain Study} \label{sec:neck}
+
+\cite{chow_heller_2006} reported on a double-blind, randomised,
+placebo-controlled superiority study evaluating the effect of 300 mW, 830 nm
+laser on chronic neck pain for a total of $N = 90$ subjects at three time
+points.  Pain was measured using a horizontal $10$cm Visual Analogue Scale
+(VAS, mapped to the unit interval) before treatment start (``baseline''),
+directly after $14$ treatments applied over the course of seven weeks (``7
+weeks''), and four weeks after end of treatment (``12 weeks'').  The VAS
+trajectories of all subjects are given in Figure~\ref{fig:parplot} and the
+marginal distributions of VAS at the three time points are presented in
+Figure~\ref{fig:ecdfplot}, separately for the two treatment arms (placebo
+and active laser treatment).  The left panel in this figure highlights quite
+substantial baseline differences and Table~\ref{tab:samp} indicates missing
+values for the VAS measurements directly at the end of treatment.
+
+\begin{table}[h]
+%%
+<<samplesize, results = tex, echo = FALSE>>=
+toLatex(ftable(xtabs(~ laser + time, data = pain)))
+@
+%%
+\caption{Low-level laser therapy against chronic neck pain
+\citep{chow_heller_2006} data: Sample sizes in two treatment groups over
+time. \label{tab:samp}}
+\end{table}
+
+\begin{figure}[ht!]
+%%
+<<plot, echo = FALSE, width = 6, height = 4, fig = TRUE>>=
+print(xyplot(vas ~ time | laser, data = pain, 
+       groups = id, type = "b", col = rgb(.1, .1, .1, .1),
+       lwd = 2, layout = c(2, 1),
+       ylab = "Neck pain (on visual analogue scale)", 
+       xlab = "Examinations"))
+@
+%%
+\caption{Low-level laser therapy against chronic neck pain
+\citep{chow_heller_2006} data: Joint distribution of pain measured on Visual
+Analogue Scale for two treatment groups for three time points. \label{fig:parplot}}
+\end{figure}
+
+\begin{figure}[ht!]
+%%
+<<ecdf, echo = FALSE, width = 6, height = 4, fig = TRUE>>=
+print(ecdfplot(~ vas | time, data = pain, groups = laser,
+         xlab = "Neck pain (on visual analogue scale)", 
+         panel = function(...) {
+             panel.ecdfplot(...)
+             panel.abline(a = 0, b = 1, col = "grey")
+         },
+         auto.key = list(columns = 2, position = "top")))
+@
+%%
+\caption{Low-level laser therapy against chronic neck pain
+\citep{chow_heller_2006} data: Marginal distributions of pain measured on Visual
+Analogue Scale for two treatment groups for three time points. \label{fig:ecdfplot}}
+\end{figure}
+
+
+In their ``Statistical Methods'' section, \cite{chow_heller_2006} first
+reflect on whether or not VAS should be treated as ordinal or as being
+interval-scaled.  Techniques under both paradigms were applied, first
+comparing change scores (VAS at 12 weeks minus VAS at baseline) using the
+two-sample $t$-test and comparing an ordinal assessment of change in pain
+severity using a proportional odds model.  Down the road, the methodological
+issues arising in this trial motivated the development of ordinal regression
+models for continuous scales \citep{manuguerra_heller_2010} by one of the
+trial statisticians.
+
+In addition to the analyses presented by \cite{chow_heller_2006}, one could
+have asked the question ``Are the two marginal distributions of VAS four
+weeks after end of treatment (third panel in Figure~\ref{fig:ecdfplot})
+identical?''.  Because of the boundedness and lack of symmetry, at least in
+the active laser group, of VAS recordings, many data analysts may opt for a
+``nonparametric'' approach, and thus \code{wilcox.test} may seem an
+attractive choice.  Running the following code in \proglang{R} 4.6.0 or
+later results in
+%
+%%
+<<wilcox.test, echo = TRUE>>=
+(w <- wilcox.test(vas ~ laser, data = pain, subset = time == "12 weeks",
+                  exact = TRUE, conf.int = TRUE))
+@
+%%
+%
+Prior to version \proglang{R} 4.6.0, \code{wilcox.test} 
+would have refused to report an exact $p$-value citing the
+presence of $\Sexpr{ties12}$ tied response values.  Even without such a
+warning, the results are puzzling: We picked \code{wilcox.test} because of
+its ``nonparametric'' nature, so where does the location shift parameter
+come from?  Was VAS treated as an interval-scaled variable?  Where do then
+the ties come from and how do they impact model and estimation?  The
+documentation in \Rcmd{help("wilcox.test")} provides some clues: With
+$\Prob(\text{VAS} \le \ry \mid \text{Placebo}) = F_\text{VAS}(\ry)$ the
+marginal distribution of VAS in the placebo group, the results suggest a
+marginal distribution of VAS in those treated with an active laser
+$F_\text{VAS}(\ry - \beta)$, with $\hat{\beta} = \Sexpr{frmt3(w$estimate)}$
+and a $\Sexpr{frmt1(attr(w$conf.int, "conf.level") * 100)}$\% confidence
+interval $\Sexpr{frmtci(w$conf.int)}$.  The distribution function
+$F_\text{VAS}$ is not specified, so the procedure comes with a
+distribution-free flavour.  However, the model assumes that VAS is a
+continuous variable, because for ordinal variables the expression
+$F_\text{VAS}(\ry - \beta)$ is ill-defined.  Furthermore, the bounds of VAS
+are not respected, because \eg~by definition $F_\text{VAS}(\ry - 0.22) = 0$
+for all $\ry < 0.22$.  One could try to work around this problem by
+analysing a transformation of VAS, maybe a probit transformation
+$\Phi^{-1}(\text{VAS})$, but the location shift on this scale is not
+directly interpretable.  Answers regarding the measurement scale of the
+response, however, are much harder to find, mainly due to a lack of a model
+motivating the test statistic.
+
+This gap was filled by \cite{Wang_Tian_2017}, who proved that the Wilcoxon
+test is a score test in a proportional odds model where the cumulative
+distribution functions in the two treatment groups are parameterised as
+%%
+\begin{eqnarray*}
+\Prob(\text{VAS} \le \ry \mid \text{Placebo}) & = & \expit(\h(\ry)) \\
+\Prob(\text{VAS} \le \ry \mid \text{Active}) & = & \expit(\h(\ry) - \eshiftparm)
+\end{eqnarray*}
+%%
+with $\expit(\rz) = (1 + \exp(-\rz))^{-1}$ denoting the distribution function of the
+standard logistic distribution.
+Consequently, \cite{Wang_Tian_2017} suggest to estimate log-odds ratios by
+means of this model and to provide corresponding confidence intervals. 
+Before we present the theoretical arguments, we follow their advice and
+analyse the data by means of a Wald test and confidence interval obtained
+from a proportional odds model.  \code{MASS::polr} \citep{MASS} implements
+this model, however, only for ordered categorical response variables. 
+Simply treating the observed VAS values as ordered categories leads to
+%%
+<<polr, message = FALSE>>=
+w12 <- subset(pain, time == "12 weeks")
+w12$vasE <- ordered(w12$vas)
+p <- polr(vasE ~ laser, data = w12, Hess = TRUE)
+summary(p)$coefficients["laserActive",]
+confint(p)
+@
+%%
+with log-odds ratio $\hat{\eshiftparm} = \Sexpr{frmt3(coef(p))}$ indicating
+that pain was lower under active laser treatment because the negative shift
+associates negative values of $\eshiftparm$ with smaller VAS values in the
+treated group.  This log-odds ratio effect is invariant with respect to
+monotone transformations of the response.  Unfortunately, the Wald $p$-value
+is not identical to the $p$-value reported by \code{wilcox.test}, not even
+when we use an asymptotic $p$-value instead of an exact one
+%%
+<<wpolr, message = FALSE>>=
+wilcox.test(vas ~ laser, data = pain, subset = time == "12 weeks",
+            exact = FALSE)$p.value
+@
+%%
+In addition, the tests' $p$-value and the Wald confidence intervals are not congruent
+%%
+<<wpolrci, message = FALSE>>=
+confint(p, level = 1 - w$p.value)
+@
+%%
+and it can happen that \code{wilcox.test} suggests to reject equality of the
+distribution functions at nominal level $\alpha$ yet a two-sided $(1 -
+\alpha) \times 100\%$ Wald confidence interval includes zero or vice versa.
+
+\section{Theory}
+
+We first review the relevant theory of score tests (also known as Rao score
+and Lagrange Multiplier tests) and corresponding confidence intervals in
+Section~\ref{sec:scores}.  The Wilcoxon test is then embedded in this theory
+as the nonparametric or empirical score test in a proportional odds model in
+Section~\ref{sec:wilcoxon} and we apply this result to the construction of
+confidence intervals in Section~\ref{sec:intervals}.  We generalise the
+framework to stratified $K$-sample oneway layouts with $K > 2$ and describe the main
+ideas underlying semiparametrically efficient population and permutation
+inference in this model class in Section~\ref{sec:general}.
+
+\subsection{Score Tests and Intervals} \label{sec:scores}
+
+Consider a single parameter of interest $\eshiftparm \in \RR$ and other
+parameters $\parm \in \RR^\dimparm$ and $N$ independent observations with
+log-likelihood contributions $\ell_i: \RR^{1 + \dimparm} \rightarrow \RR$. 
+The log-likelihood is given by $\ell(\eshiftparm, \parm) = \sum_{i = 1}^N
+\ell_i(\eshiftparm, \parm)$ and its score function by
+%%
+\begin{eqnarray*}
+\mS(\eshiftparm, \parm) =
+  \frac{\partial \ell(\eshiftparm, \parm)}{
+        \partial (\eshiftparm, \parm^\top)^\top} = 
+  (S_\eshiftparm(\eshiftparm, \parm), 
+   \mS_{\parm}(\eshiftparm, \parm)^\top)^\top \in \RR^{1 + \dimparm}.
+\end{eqnarray*}
+%%
+The first element of the gradient is the score with respect to the parameter
+of interest $\eshiftparm$.  The observed Fisher information matrix for all
+parameters $(\eshiftparm, \parm^\top)^\top$ is
+%%
+\begin{eqnarray*}
+\FI(\eshiftparm, \parm) = 
+  \frac{\partial^2 \ell(\eshiftparm, \parm)}{
+        \partial^2 (\eshiftparm, \parm^\top)^\top} = 
+\left( \begin{array}{ll}
+    \eFI(\eshiftparm, \parm)_{\eshiftparm, \eshiftparm} & 
+        \FI(\eshiftparm, \parm)_{\eshiftparm, \parm} \\
+    \FI(\eshiftparm, \parm)^\top_{\eshiftparm, \parm} & 
+        \FI(\eshiftparm, \parm)_{\parm, \parm} \\
+\end{array} \right) \in \RR^{1 + \dimparm, 1 + \dimparm}
+\end{eqnarray*}
+with inverse
+\begin{eqnarray*}
+\mA(\eshiftparm, \parm) = \FI(\eshiftparm, \parm)^{-1} = 
+\left( \begin{array}{ll}
+    A(\eshiftparm, \parm)_{\eshiftparm, \eshiftparm} & 
+        \mA(\eshiftparm, \parm)_{\eshiftparm, \parm} \\
+    \mA(\eshiftparm, \parm)^\top_{\eshiftparm, \parm} & 
+        \mA(\eshiftparm, \parm)_{\parm, \parm} \\
+\end{array} \right) \in \RR^{1 + \dimparm, 1 + \dimparm}.
+\end{eqnarray*}
+%%
+Both matrices are partitioned such that the first row and column position
+corresponds to the parameter of interest $\eshiftparm$.  Under the composite
+null hypothesis $H_0: \eshiftparm = \eshiftparm_0$ the ``nuisance''
+parameters $\parm$ are unknown and the restricted maximum likelihood
+estimator
+%%
+\begin{eqnarray*}
+\hat{\parm}(\eshiftparm_0) = \argmax_{\parm \in \RR^\dimparm}
+\ell(\eshiftparm_0, \parm)
+\end{eqnarray*}
+%%
+satisfies $\mS_{\parm}(\eshiftparm_0, \hat{\parm}(\eshiftparm_0)) = \nullvec$. 
+The quadratic score statistic simplifies to 
+%%
+\begin{eqnarray*}
+& & \mS(\eshiftparm_0, \hat{\parm}(\eshiftparm_0))^\top \FI(\eshiftparm_0, \hat{\parm}(\eshiftparm_0))^{-1} 
+    \mS(\eshiftparm_0, \hat{\parm}(\eshiftparm_0)) \\
+& & \quad = (S_\eshiftparm(\eshiftparm_0, \hat{\parm}(\eshiftparm_0)), \nullvec^\top)
+      \FI(\eshiftparm_0, \hat{\parm}(\eshiftparm_0))^{-1} 
+      (S_\eshiftparm(\eshiftparm_0, \hat{\parm}(\eshiftparm_0)), \nullvec^\top)^\top \\
+& & \quad = (\FI(\eshiftparm_0, \hat{\parm}(\eshiftparm_0))^{-1})_{11} S_\eshiftparm(\eshiftparm_0, \hat{\parm}(\eshiftparm_0))^2 \\
+& & \quad =   A(\eshiftparm_0, \hat{\parm}(\eshiftparm_0))_{\eshiftparm, \eshiftparm}
+  S_\eshiftparm(\eshiftparm_0, \hat{\parm}(\eshiftparm_0))^2
+\end{eqnarray*}
+%
+as explained for example in \citet[Formula~1.18]{Rao_2005}, \citet[pages
+539--541]{Lehmann_1998}, \citet[example 8.11]{Pawitan_2001}, or
+\citet[Formula~4.1.2]{Fahrmeir_Tutz_2001}, and we define the linear score
+statistic for $H_0: \eshiftparm = \eshiftparm_0$ as
+%%
+\begin{eqnarray*}
+S(\eshiftparm_0) := A(\eshiftparm_0, \hat{\parm}(\eshiftparm_0))_{\eshiftparm, \eshiftparm}^{\nicefrac{1}{2}}
+  S_\eshiftparm(\eshiftparm_0, \hat{\parm}(\eshiftparm_0)) .
+\end{eqnarray*}
+%
+The ancillary statistic $S(\eshiftparm_0)$ can be used to construct $(1 - 2
+\alpha) \times 100 \%$ score intervals $\{\eshiftparm_0 \in \RR \mid
+Q(\alpha) < S(\eshiftparm_0) \le Q(1 - \alpha)\}$ where the quantiles are
+such that $\Prob_{\eshiftparm}(S(\eshiftparm) \le Q(\alpha)) \le \alpha$ and
+$\Prob_{\eshiftparm}(S(\eshiftparm) > Q(1 - \alpha)) \ge 1 - \alpha$ for
+some $0 < \alpha < \nicefrac{1}{2}$ and $\eshiftparm$ denoting the true
+unknown parameter of the data generating process. Asymptotically and under
+suitable regularity conditions, $S(\eshiftparm) / \sqrt{N}
+\stackrel{d}{\rightarrow} \ND(0, 1)$ and normal quantiles $Q(\alpha) =
+\sqrt{N} \Phi^{-1}(\alpha)$ can be used to compute score confidence
+intervals. Alternatively, in the $K$-sample situation we are concerned with,
+under the null hypothesis $H_0:
+\eshiftparm = 0$ stating equivalence of outcome distributions, 
+the term $A(0, \hat{\parm}(0))_{\eshiftparm, \eshiftparm}$
+is invariant with respect to permutations, and thus the exact permutation
+distribution of $S_\eshiftparm(0, \hat{\parm}(0))$, or a Monte-Carlo
+approximation thereof, can be used to define $Q(\alpha)$. Thus, 
+exact or approximate conditional tests and confidence intervals based on
+quantiles of the permutation distribution are available to complement the unconditional
+asymptotic variants.
+
+Score intervals are invariant with respect to monotone transformations and
+computationally attractive because only the distribution of $S(0)$ under
+$\eshiftparm_0 = 0$ needs to be computed.  However, computation of
+$S(\eshiftparm_0)$ for $\eshiftparm_0 \neq 0$ requires updating the maximum
+likelihood estimators $\hat{\parm}(\eshiftparm_0)$.
+
+An equivalent formulation of score tests and confidence intervals for
+$\eshiftparm$ via the profile log-likelihood 
+%%
+\begin{eqnarray*}
+\tilde{\ell}(\eshiftparm) = \sum_{i = 1}^N \ell_i(\eshiftparm, \hat{\parm}(\eshiftparm))
+\end{eqnarray*}
+%%
+is theoretically and computationally attractive.  In the semiparametric
+models outlined in Section~\ref{sec:general}, the maximum likelihood
+estimator $\hat{\eshiftparm}$ is asymptotically normal and efficient
+\citep{MurphyVaart2000} and, because the log-likelihood $\ell$ and thus the
+profile log-likelihood $\tilde{\ell}$ are concave functions of
+$\eshiftparm$, confidence regions are convex sets \citep[Lemma
+A.1.,][]{MurphyVaart1997}. For scalar parameters $\eshiftparm$, these
+results ensure that we can compute congruent score or likelihood-ratio intervals by
+inversion of the corresponding tests, that is, $(1 - 2\alpha) \times 100\%$ 
+confidence intervals will exclude $\eshiftparm_0$ iff 
+the hypothesis $H_0: \eshiftparm = \eshiftparm_0$ is rejected at level $2
+\alpha$. In Appendix~\ref{app:edge}, we discuss situations where the log-likelihood
+is very flat and thus the computation of parameter estimates and
+corresponding confidence intervals fails, despite these theoretical results.
+
+%This can be avoided by using a 
+%first order Taylor approximation of $S$ around $\hat{\eshiftparm}$ (which
+%ignores the terms involving $\hat{\parm}^\prime(\eshiftparm_0)$) 
+%\begin{eqnarray*}
+%S(\eshiftparm_0) & = & A(\eshiftparm_0, \hat{\parm}(\eshiftparm_0))_{\eshiftparm, \eshiftparm}^{\nicefrac{1}{2}} 
+%  S_\eshiftparm(\eshiftparm_0, \hat{\parm}(\eshiftparm_0))\\
+%& \approx &  
+%  A(\hat{\eshiftparm}, \hat{\parm})_{\eshiftparm, \eshiftparm}^{\nicefrac{1}{2}} 
+%    S_\eshiftparm(\hat{\eshiftparm}, \hat{\parm})
+%  + \left( A(\hat{\eshiftparm}, \hat{\parm})_{\eshiftparm, \eshiftparm}^{\nicefrac{1}{2}} 
+%    S^\prime_\eshiftparm(\hat{\eshiftparm}, \hat{\parm})
+%  +  A^\prime(\hat{\eshiftparm}, \hat{\parm})_{\eshiftparm, \eshiftparm}^{\nicefrac{1}{2}}
+%    S_\eshiftparm(\hat{\eshiftparm}, \hat{\parm}) \right) 
+%    (\eshiftparm_0 - \hat{\eshiftparm}) \\
+%& \stackrel{S_\eshiftparm(\hat{\eshiftparm}, \hat{\parm}) = 0}{=} & 
+%   A(\hat{\eshiftparm}, \hat{\parm})_{\eshiftparm, \eshiftparm}^{\nicefrac{1}{2}}(\eshiftparm_0 - \hat{\eshiftparm})  
+%   S^\prime_\eshiftparm(\hat{\eshiftparm}, \hat{\parm}) 
+%\stackrel{S^\prime_\eshiftparm(\hat{\eshiftparm}, \hat{\parm}) = A(\hat{\eshiftparm}, \hat{\parm})_{\eshiftparm,
+%\eshiftparm}^{-1}}{=} A(\hat{\eshiftparm}, \hat{\parm})_{\eshiftparm,
+%\eshiftparm}^{- \nicefrac{1}{2}}(\eshiftparm_0 - \hat{\eshiftparm}) =:
+%\tilde{S}(\eshiftparm_0).
+%\end{eqnarray*}
+%This linear approximation only depends on the maximum likelihood estimators
+%$\hat{\eshiftparm}, \hat{\parm}$ and can be used to compute a Wald-type
+%confidence interval
+%
+%\begin{eqnarray} \label{fm:Wald}
+%\left(\hat{\eshiftparm} + Q(\alpha) \sqrt{A(\hat{\eshiftparm},
+%  \hat{\parm})_{\eshiftparm, \eshiftparm}}, 
+%\quad \hat{\eshiftparm} + Q(1 - \alpha) \sqrt{A(\hat{\eshiftparm},
+%  \hat{\parm})_{\eshiftparm, \eshiftparm}}\right].
+%\end{eqnarray}
+%
+%Asymptotic power? Sample size?
+ 
+\subsection{The Wilcoxon Score Test} \label{sec:wilcoxon}
+
+We will now discuss a model, featuring nuisance parameters $\parm$ in
+addition to a certain parameter of interest $\eshiftparm$, whose likelihood
+function gives rise to a score statistic $S(\eshiftparm_0)$ which, under the
+null hypothesis $\eshiftparm = \eshiftparm_0 = 0$, is a linear function of
+the Wilcoxon Mann-Whitney two-sample rank sum statistic.  Based on this
+model, we will explain how to interpret the parameter $\eshiftparm$, how to
+estimate it using maximum likelihood, and how to obtain confidence
+intervals.  Furthermore, the model allows to identify situations where the
+test will have high power, and situations where we cannot expect the test to
+work well, demystifying the notion of its ``nonparametric'' nature.  The
+model will serve as a blueprint for the development of more general models
+for $K > 2$ samples in stratified designs in Section~\ref{sec:general}.
+
+For a univariate at least ordered response $\rY \in \samY$ and $X \in \RR$
+a numeric covariate, with $X \in \{0, 1\}$ being an appropriate contrast in
+the two-sample situation, we study the proportional odds model for the
+conditional distribution of $\rY$ given $X = x$
+%%
+\begin{eqnarray} \label{fm:polr}
+\Prob(\rY \le \ry \mid X = x) = \expit(\h(\ry \mid \parm) - \eshiftparm x) =: F_\rY(\ry \mid x).
+\end{eqnarray}
+%%
+The model features a logit-link ($\expit = \logit^{-1}$) and $\h(\cdot \mid \parm):
+\samY \rightarrow \RR$, an unknown monotonically increasing transformation
+function depending on parameters $\parm \in \RR^\dimparm$, and defines the
+effect of a one-unit increase in $x$ by the log-odds ratio $\eshiftparm$
+such that
+%%
+\begin{eqnarray*}
+\frac{\Prob(\rY \le \ry \mid X = x + 1)}{
+\Prob(\rY > \ry \mid X = x + 1)} = \exp(-\eshiftparm) \frac{\Prob(\rY \le \ry \mid X = x)}{
+\Prob(\rY > \ry \mid X = x)} \quad \forall \ry \in \samY.
+\end{eqnarray*}
+%%
+In the two-sample case, the model states that the odds of observing a value
+of at most $\ry$ in the second sample ($x = 1$) is $\exp(-\eshiftparm)$
+times the odds of observing a value of at most $\ry$ in the first sample ($x
+= 0$).  The proportionality assumption ensures that the factor
+$\exp(-\eshiftparm)$ applies to all possible cut-off values $\ry$. 
+Equivalently, one can think of a series of binary logistic regression models
+with different cut-off points $\ry$ for dichotomising the response $\rY \le
+\ry$.  The corresponding intercepts increase as $\ry$ increases but the
+log-odds ratio $-\eshiftparm$ remains constant.  It is well known
+\citep{Prentice_1978} that the Wilcoxon test is the locally most powerful
+rank test against shift-alternatives in the logistic model $\Prob(\rY \le
+\ry \mid X = x) = \expit(\ry - \eshiftparm x)$.  The shift parameter
+$\eshiftparm$ is equivalent to a log-odds ratio in this logistic model.  For
+absolutely continuous responses, model (\ref{fm:polr}) applies a
+transformation $\h(\rY \mid \parm)$ such that $\h(\rY \mid \parm) -
+\eshiftparm x$ follows a standard logistic distribution.  The shift
+parameter $\eshiftparm$ is no longer interpretable as a difference on the
+original measurement scale of $\rY$ but the interpretation as log-odds ratio
+remains valid.
+
+In the binary logistic regression point of view, the parameters $\parm$ of
+the monotonically increasing transformation function $\h$ are the increasing
+intercepts.  Testing $H_0: \eshiftparm = 0$ in the two-sample situation is
+equivalent to the null $\rY \perp \!\!\!  \perp X$ or $F_\rY(\ry \mid 0) =
+F_\rY(\ry \mid 1)$ for all $\ry \in \samY$.  Our arguments rely on the fact
+that the Wilcoxon test is the nonparametric or empirical score test for
+$\eshiftparm_0$ in the proportional odds model (\ref{fm:polr}) because the
+score statistic $S(0)$ is permutation-equivalent to the sum of the ranks in
+the second group ($x_i = 1$).  \cite{Wang_Tian_2017} demonstrate that the
+score function $S_\eshiftparm(0, \hat{\parm}(0))$ is a linear function of
+the Wilcoxon statistic in the two-sample case, similar arguments are given
+in the Appendix to \cite{Liu_Shepherd_Li_2017}.
+
+To derive the score statistic $S(0)$ for model (\ref{fm:polr}), consider a
+sample of $N$ independent observations $(\ry_i, x_i), i = 1, \dots, N$ with
+$C \le N$ distinct ordered outcomes $\upsilon_{1} < \dots < \upsilon_{C}$ in
+$\ry_1, \dots, \ry_N$.  The $i$th observation contributes
+%%
+\begin{eqnarray} \label{fm:loglik}
+\ell_i(\eshiftparm, \parm) = \log(\expit(\h(\ry_i \mid \parm) -
+\eshiftparm x_i) - \expit(\h(\ry_i- \mid \parm) - \eshiftparm x_i))
+\end{eqnarray}
+%%
+to the nonparametric or empirical log-likelihood function \citep{Owen_2001}
+derived from model (\ref{fm:polr}).  Here, $\ry_i-$ is the largest distinct
+ordered outcome smaller than $\ry_i$.  The transformation function $\h$ is
+parameterised nonparametrically through parameters $\parm \in \RR^{C - 1}$,
+more specifically through $\eparm_0 = -\infty < \eparm_1 < \dots <
+\eparm_{C} = \infty$, as
+%%
+\begin{eqnarray*}
+\h(\upsilon_c \mid \parm)  =  \eparm_c
+\text{ and }
+\h(\upsilon_c - \mid \parm)  =  \eparm_{c - 1},
+\end{eqnarray*}
+\ie~one parameter is assigned to each but the largest of the distinct
+ordered outcomes.
+
+Under $H_0: \eshiftparm = 0$, we assign upranks $R_1, \dots, R_N$ to $\ry_1,
+\dots, \ry_N$, with $R_i$ being the number of observations not larger than
+$\ry_i$.  The marginal distribution function is estimated by the
+nonparametric or empirical maximum likelihood estimator $\hat{\Prob}(\rY \le
+\ry_i) = \nicefrac{R_i}{N}$, \ie~we apply the empirical cumulative
+distribution function.  This estimator is the restricted nonparametric
+maximum likelihood estimator under $\eshiftparm = 0$.  We obtain $\h(\ry_i
+\mid \hat{\parm}(0)) = \logit(\nicefrac{R_i}{N})$ and the score statistic is
+then
+%%
+\begin{eqnarray*}
+S(0) & = & \sqrt{A(0, \hat{\parm}(0))_{\eshiftparm, \eshiftparm}} 
+  \sum_{i = 1}^N
+  \left. \frac{\partial \log(\expit(\h(\ry_i \mid \hat{\parm}(0)) - \eshiftparm x_i) - 
+                             \expit(\h(\ry_i- \mid \hat{\parm}(0)) - \eshiftparm x_i))}{\partial \eshiftparm}
+  \right|_{\eshiftparm = 0} \\
+& = & \sqrt{A(0, \hat{\parm}(0))_{\eshiftparm, \eshiftparm}}
+  \sum_{i = 1}^N
+  \frac{\expit^\prime(\h(\ry_i \mid \hat{\parm}(0)) - 0 x_i) - 
+        \expit^\prime(\h(\ry_i- \mid \hat{\parm}(0)) - 0 x_i)}{
+        \expit(\h(\ry_i \mid \hat{\parm}(0)) - 0 x_i) - 
+        \expit(\h(\ry_i- \mid \hat{\parm}(0)) - 0 x_i)} x_i.
+\end{eqnarray*}
+%%
+With $\expit^\prime(z) = \expit(z)(1 - \expit(z))$, $\expit(\h(\ry_i \mid
+\hat{\parm}(0)) - 0 x_i) = \nicefrac{R_i}{N}$ and $\expit(\h(\ry_i- \mid
+\hat{\parm}(0)) - 0 x_i) = \nicefrac{R_i - t_i}{N}$ ($t_i$ being the number
+of ties equal to $\ry_i$) this simplifies to
+%%
+\begin{eqnarray*}
+S(0) = \sqrt{A(0, \hat{\parm}(0))_{\eshiftparm, \eshiftparm}}\sum_{i = 1}^N \frac{N - 2 R_i + t_i}{N} x_i.
+\end{eqnarray*}
+%%
+For the two-sample case ($x_i \in \{0, 1\}$) with $N_1 := \sum_{i = 1}^N
+x_i$ and $N_0 := N - N_1$, we obtain
+%
+\begin{eqnarray*}
+\frac{N}{2} \sqrt{A(0, \hat{\parm}(0))_{\eshiftparm, \eshiftparm}}^{-1} S(0) 
+& = & \frac{N}{2} \sum_{i: x_i = 1} \left(1 - \frac{2}{N}\left(R_i -\frac{t_i}{2}\right)\right) \\
+& = & \frac{N}{2}\left(N_1 - \frac{2}{N_0 + N_1} \sum_{i: x_i = 1} \left(R_i - \frac{t_i - 1}{2} - \frac{1}{2} \right) \right)\\
+& = & \frac{N_1}{2} + \frac{N_1 (N_0 + N_1)}{2} - \sum_{i: x_i = 1} \left(R_i - \frac{t_i - 1}{2}\right) \\
+& = & \underbrace{\frac{N_0 N_1}{2} + \underbrace{\frac{N_1(N_1 + 1)}{2}  - \underbrace{\sum_{i: x_i = 1} \left(R_i - \frac{t_i -
+1}{2}\right)}_{= W}}_{=  -U}}_{= -(U - \Ex(U))} \\
+\end{eqnarray*}
+%%
+where $W$ is the Wilcoxon statistic, \ie~the sum of the mid-ranks $R_i -
+(t_i - 1)/2$ in the sample with $x_i = 1$, and $U = W - N_1(N_1 + 1)/2$ is
+the corresponding Mann-Whitney $U$-statistic with $\Ex(U) = N_0 N_1 / 2$
+under $H_0$.  The latter statistic, named \Rcmd{W}, is returned by
+\code{wilcox.test}, with $x_i = 1$ whenever observation $i$ belongs to the
+first group in terms of the ordering of the levels of the corresponding
+factor.  In contrast, \code{free1way} reports the standardised statistic $S(0)$ named \Rcmd{Z} based on
+$x_i = 1$ when observation $i$ belongs to the second group (corresponding to
+the default treatment contrasts in most models in \proglang{R}).
+
+This relationship between the score statistic $S(0)$ of a proportional odds
+model for at least ordered responses and the Wilcoxon statistic $W$ in the
+two-sample situation is significant from a practical as well as a
+theoretical point of view.  Practically, we can use this result for the
+construction of score intervals for $\eshiftparm$ (see
+Section~\ref{sec:intervals}).  Theoretically, we see that there is no
+difference in the treatment of binary ($C = 2$), ordinal ($C < N$), and
+continuous ($C = N$ in the absence and $C < N$ in the presence of ties)
+responses and, in the latter case, ties do not require special treatment. 
+Shift effects on the original response scale are not present in this model
+and thus is seems suboptimal for \code{wilcox.test} to report corresponding
+estimates and confidence intervals.  However, it is perfectly appropriate to
+report the maximum likelihood estimator $\hat{\eshiftparm}$, interpretable
+as log-odds ratio, and a corresponding confidence interval in addition to a
+corresponding $p$-value; we explain details in Section~\ref{sec:intervals}. 
+Furthermore, we can apply the arguments presented by \citet[Chapter
+15.5]{vdVaart_1998} to conclude that the Wilcoxon test is the locally most
+powerful rank test against proportional odds alternatives for any baseline
+distribution $\Prob(\rY \le \ry \mid X = 0)$ in the very same way as the
+log-rank (or Savage) test is the locally most powerful rank test against
+proportional hazards alternatives, see \citet[Example 15.16]{vdVaart_1998}. 
+In this sense, the Wilcoxon test is distribution-free with maximal, and even
+optimal, power against proportional odds alternatives.  At the same time, it
+also implies that the Wilcoxon test is inefficient in other situations, such
+as against hazard ratio alternatives or in cases where the distribution
+functions cross.  Thus, tools for diagnostic assessment of the proportional
+odds assumption are important.
+
+The unconditional exact or asymptotic score test based on this statistic is
+commonly applied for computing $p$-values against the null $H_0: \eshiftparm
+= 0$ and \code{wilcox.test} implements this test.  Asymptotic versions rely
+on an approximation of the variance of $W$ and exact versions compute the
+permutation distribution of $W$, including in the absence of ties where 
+conditioning on the
+observed mid-ranks leads to conditional or permutation score tests for $W$,
+with exact and asymptotic variants now (since R~4.6.0) being available in
+\code{wilcox.test}.  The conditional Wilcoxon test is especially attractive
+for the analysis of ordered categorical responses: The likelihood
+(\ref{fm:loglik}) is the likelihood of a proportional odds model for
+categorical data and the Wilcoxon statistic based on mid-ranks is
+proportional to the corresponding score statistic.  It seems therefore
+overly restrictive for \code{wilcox.test} to not allow ordered categorical
+responses.
+
+
+
+\subsection{Nonparametric or Empirical Score Intervals for Log-odds Ratios} \label{sec:intervals}
+
+To derive unconditional and conditional $(1 - 2 \alpha) \times 100\% $ score
+confidence intervals for the log-odds ratio $\eshiftparm$, we obtain
+corresponding quantiles $Q(\alpha)$ and $Q(1 - \alpha)$ for $S(0)$.  The
+lower confidence limit is given by the root of $S(\eshiftparm_0) -
+Q(\alpha)$ and the upper limit by the root of $S(\eshiftparm_0) - Q(1 -
+\alpha)$, where
+%
+\begin{eqnarray*}
+S(\eshiftparm_0) = \sqrt{A(\eshiftparm_0, \hat{\parm}(\eshiftparm_0))_{\eshiftparm, \eshiftparm}}
+  \sum_{i = 1}^N
+  \frac{\expit^\prime(\h(\ry_i \mid \hat{\parm}(\eshiftparm_0)) - \eshiftparm_0 x_i) - 
+        \expit^\prime(\h(\ry_i- \mid \hat{\parm}(\eshiftparm_0)) - \eshiftparm_0 x_i)}{
+        \expit(\h(\ry_i \mid \hat{\parm}(\eshiftparm_0)) - \eshiftparm_0 x_i) - 
+        \expit(\h(\ry_i- \mid \hat{\parm}(\eshiftparm_0)) - \eshiftparm_0 x_i)}
+        x_i.
+\end{eqnarray*}
+%
+Evaluating the score function requires computation of the nonparametric
+maximum likelihood estimator $\hat{\parm}(\eshiftparm_0)$ and corresponding
+inverse Fisher information $A(\eshiftparm_0,
+\hat{\parm}(\eshiftparm_0))_{\eshiftparm, \eshiftparm}$ under $H_0:
+\eshiftparm = \eshiftparm_0$.  With the rows of the design matrices of the
+proportional odds model being $\bar{\basisy}_i = (x_i, e_{C +
+1}(\ry_i)^\top)^\top$ and $\ubar{\basisy}_i = (x_i, e_{C +
+1}(\ry_i-)^\top)^\top$, where $e_{C + 1}(\upsilon_p)$ and $e_{C +
+1}(\upsilon_p-)$ are unit vectors of length $C + 1$, and parameters
+$\gammavec = (\eshiftparm_0, \eparm_0, \dots, \eparm_{C})^\top$ (remember
+$\eparm_0 = -\infty$ and $\eparm_{C} = \infty$, so there are $1 + C - 1 =
+\dimparm + 1$ unknown parameters) such that $\bar{\basisy}_i^\top \gammavec
+= x_i \eshiftparm_0 + \upsilon_p$ and $\ubar{\basisy}_i^\top \gammavec = x_i
+\eshiftparm_0 + \upsilon_{p - 1}$ if $\ry_i = \upsilon_p$, we obtain the
+Fisher matrix as \citep[cf.~Formula~(4) in][]{HothornMoestBuehlmann2017}
+%%
+\begin{eqnarray*}
+\FI(\eshiftparm_0, \parm) & = & 
+\left( \begin{array}{ll}
+    \eFI(\eshiftparm_0, \parm)_{\eshiftparm, \eshiftparm} & 
+        \FI(\eshiftparm_0, \parm)_{\eshiftparm, \parm} \\
+    \FI(\eshiftparm_0, \parm)^\top_{\eshiftparm, \parm} & 
+        \FI(\eshiftparm_0, \parm)_{\parm, \parm} \\
+\end{array} \right) \\
+& = & 
+\sum_{i = 1}^N 
+- \left\{\frac{\expit^{\prime\prime}(\bar{\basisy}_i^\top \gammavec)\bar{\basisy}_i\bar{\basisy}_i^\top -
+      \expit^{\prime\prime}(\ubar{\basisy}_i^\top \gammavec) \ubar{\basisy}_i \ubar{\basisy}_i^\top}
+     {\expit(\bar{\basisy}_i^\top \gammavec) - \expit(\ubar{\basisy}_i^\top \gammavec)} \right. \\
+& &  \left. \quad \quad -\frac{[\expit^\prime(\bar{\basisy}_i^\top \gammavec) \bar{\basisy}_i - 
+       \expit^\prime(\ubar{\basisy}_i^\top \gammavec) \ubar{\basisy}_i] }
+     {[\expit(\bar{\basisy}_i^\top \gammavec) - \expit(\ubar{\basisy}_i^\top
+\gammavec)]^2} \times 
+[\expit^\prime(\bar{\basisy}_i^\top \gammavec)\bar{\basisy}_i^\top - 
+       \expit^\prime(\ubar{\basisy}_i^\top \gammavec) \ubar{\basisy}_i^\top]
+\right\}. 
+\end{eqnarray*}
+%%
+The Fisher information $A(\eshiftparm_0, \hat{\parm}(\eshiftparm_0))$ for
+$\eshiftparm_0$ for unknown $\parm$ is then given by the inverse of the
+Schur complement $\eFI(\eshiftparm_0,
+\hat{\parm}(\eshiftparm_0))_{\eshiftparm, \eshiftparm} - \FI(\eshiftparm_0,
+\hat{\parm}(\eshiftparm_0))_{\eshiftparm, \parm} \FI(\eshiftparm_0,
+\hat{\parm}(\eshiftparm_0))_{\parm, \parm}^{-1} \FI(\eshiftparm_0,
+\hat{\parm}(\eshiftparm_0))_{\eshiftparm, \parm}^\top$.  It should be noted,
+however, that for finite sample sizes, $4
+/ N^2 A(0, \hat{\parm}(0)_{\eshiftparm, \eshiftparm}$ is not the inverse variance of
+$U - \Ex(U)$ under $H_0: \eshiftparm = 0$. In any case, the analytic
+expression allows computation of standard errors for $\eshiftparm$ for both
+estimated and assumed parameters, the latter option allowing the power curve
+to be approximated for certain values of $\eshiftparm$ in the alternative.
+
+
+%\subsection{Parametric Transformation and Likelihood}
+%
+%The nonparametric treatment in Section~\ref{sec:wilcoxon} doesn't require
+%assumptions on the distribution of $\rY \mid X = 0$. In some situations, a smooth
+%parameterisation of the transformation function $\h$ might be preferable.
+%When there is no overlap in the response values between the two groups, the
+%nonparametric maximum likelihood estimator for $\eshiftparm$ is not defined.
+%Thus the replacement of the step-function $\h$ allowing arbitrarily large
+%steps with a smoothly parameterised function identifies the parameter
+%$\eshiftparm$. We apply a relatively low-dimensional ($C <\!\!< N$) 
+%but smooth parameterisation $\h(\ry \mid \parm) = \basisy(\ry)^\top \parm$.
+%The likelihood contributions (\ref{fm:loglik}) need to evaluate $\h$ at
+%$\ry_{(p)}$ and $\ry_{(p - 1)}$ when the $i$th observation is $\ry_i =
+%\ry_{(p)}$. Alternatively, we obtain the absolute continuous conditional density
+%\begin{eqnarray*}
+%\dY(\ry_i \mid X = x_i) & = & \expit^\prime(\h(\ry_i \mid \parm) - \eshiftparm x_i) \h^\prime(\ry \mid \parm)
+%\end{eqnarray*}
+%where $\h^\prime(\ry \mid \parm) = \basisy^\prime(\ry)^\top \parm$. The 
+%corresponding log-likelihood contributions $\ell_i(\eshiftparm, \parm) = \log(\dY(\ry_i \mid X =
+%x_i)$ are suitable for absolutly continuous responses $\ry_i$. It is now
+%straightforward to evaluate the log-likelihood contributions for
+%observations left-censored at $\ubar{\ry}_i$
+%\begin{eqnarray*}
+%\ell_i(\eshiftparm, \parm) = \log(\expit(\h(\ubar{\ry}_i \mid \parm) - \eshiftparm x_i)),
+%\end{eqnarray*}
+%right-censored at $\bar{\ry}_i$
+%\begin{eqnarray*}
+%\ell_i(\eshiftparm, \parm) = \log(1 - \expit(\h(\bar{\ry}_i \mid \parm) -
+%\eshiftparm x_i)),
+%\end{eqnarray*}
+%or interval-censored at $(\ubar{\ry}_i, \bar{\ry}_i]$
+%\begin{eqnarray*}
+%\ell_i(\eshiftparm, \parm) = \log(\expit(\h(\ubar{\ry}_i \mid \parm) -
+%\eshiftparm x_i) - \expit(\h(\bar{\ry}_i \mid \parm) - \eshiftparm x_i)).
+%\end{eqnarray*}
+%Maximum-likelihood inference for $\eshiftparm$ and $\parm$ relying on
+%Bernstein polynomials $\basisy(y)^\top \parm$ are implemented in
+%\code{tram::Colr}. This parametric approach to proportional odds models was
+%compared to the nonparametric approach by \cite{Tian_Hothorn_Li_2020}.
+%Unconditional and conditional parametric score intervals are
+%available following the same principles as described in
+%Section~\ref{sec:intervals}.
+
+\subsection{Alternative Two-sample Parameterisation}
+
+Sometimes the proportional odds model is parameterised differently in the
+two-sample situation, most importantly in terms of the probabilistic index,
+area under the ROC curve (AUC), or the C-index \citep[a broad
+overview is provided by][]{Conroy_2012}.  For $\rY(0) \sim \rY \mid X = 0$ and $\rY(1) \sim
+\rY \mid X = 1$ we have
+%
+\begin{eqnarray*}
+\text{AUC} = \Prob(\rY(0) < \rY(1)) + \nicefrac{1}{2}\Prob(\rY(0) = \rY(1)).
+\end{eqnarray*}
+%
+For $\eshiftparm = -\infty$ or $\infty$, the AUC is zero or one.  For
+$\eshiftparm = 0$, the AUC is $\nicefrac{1}{2}$.  For all other values, the
+AUC is a monotone transformation of the log-odds ratio
+\citep{Fay_Malinovsky_2018}
+%
+\begin{eqnarray*}
+\text{AUC}(\eshiftparm) = \frac{\exp(\eshiftparm)(\exp(\eshiftparm) - 1 - \eshiftparm)}{
+      (\exp(\eshiftparm) - 1)^2}.
+\end{eqnarray*}
+%
+Numerous authors proposed confidence intervals for this parameter
+\citep[][and many others]{DeLong_DeLong_Clarke-Pearson_1988,
+Newcombe_2006-1,Newcombe_2006-2,Qin_Zhou_2006,Qin_Hotilovac_2008,
+Pauly_Asendorf_Konietschke_2016,Feng_Cortese_Baumgartner_2017,Fay_Malinovsky_2018,
+Perme_Menevski_2019},
+either with or without explicit reference to the connection with the
+Wilcoxon test.  Because score intervals are invariant with respect to
+monotone transformations, we can apply the novel score intervals for
+log-odds ratios $\eshiftparm$ developed here directly for the computation of
+confidence intervals for the AUC.  It must be noted, however, that the null
+hypothesis $H_0: \text{AUC} = \nicefrac{1}{2}$ is not equivalent to the null
+$H_0: \eshiftparm = 0$: The former allows for variance heterogeneity whereas
+the latter assumes equal distributions \citep{Fay_Proschan_2010}.
+
+\subsection{Generalisation} \label{sec:general}
+
+The technical arguments presented in this section allow the generalisation
+of model~(\ref{fm:polr}) to the comparison of $K > 2$ samples by introducing
+additional parameters $\delta_k$, to stratified designs by introducing
+stratum-specific parameters $\parm$, and to other forms of the alternative
+by replacing the logit-link with some other link function.  We introduce the
+model underlying \code{free1way} in this section.
+
+We consider $K$ treatment groups $\rT \in \{1, \dots, K\}, K \ge 2$ for an
+at least ordered outcome $Y \in \samY$ observed in stratum $\rS \in \{1,
+\dots, B\}$ out of $B \ge 1$ blocks with conditional cumulative distribution
+function (CDF) $F_Y(y \mid \rT = k, \rS = b) = \Prob(Y \le y \mid \rT = k,
+\rS = b)$.  Detecting and describing differential distributions arising from
+different treatments is our main objective.  We refer to the first treatment
+$\rT = 1$ as ``control''.
+
+With model function $m: [0,1] \times \RR \rightarrow [0,1]$
+\citep[introduced by][describing the power of rank tests against
+distributional alternatives]{Lehmann:1953}, we describe the conditional
+distribution under treatment $k$ as a function of the conditional
+distribution under control and a scalar parameter $\eshiftparm_k$:
+%%
+\begin{eqnarray} \label{fm:free1way}
+F_\rY(y \mid \rT = k, \rS = b) = m(F_\rY(y \mid \rT = 1, \rS = b), \eshiftparm_k).
+\end{eqnarray}
+%%
+The model is assumed to hold for all blocks $b = 1, \dots, B$, treatments $k
+= 2, \dots, K$, and outcome values $y \in \samY$ based on parameters
+$\eshiftparm_2, \dots, \eshiftparm_K \in \RR$.  For notational convenience,
+we define $\eshiftparm_1 := 0$.
+
+This model formulation gives rise to several specific models, for example,
+$m_\text{L}(p, \eshiftparm) = p^{\exp(-\eshiftparm)}$ (Lehmann
+alternatives), $m_\text{PH}(p, \eshiftparm) = 1 - (1 -
+p)^{\exp(-\eshiftparm)}$ (proportional hazards), $m_\text{PO}(p,
+\eshiftparm) = \text{expit}(\text{logit}(p) - \eshiftparm)$ (proportional
+odds), or $m_\text{Cd}(p, \eshiftparm) = \Phi(\Phi^{-1}(p) - \eshiftparm)$
+(generalised Cohen's $d$).  Instead of directly working with $m$, we
+parameterise the model in terms of some absolute continuous CDF $F$ with
+log-concave density $f = F^\prime$ and corresponding derivative $f^\prime$,
+and quantile or link function $F^{-1}$.  The location model
+%%
+\begin{eqnarray} \label{model}
+F_Y(y \mid  \rT = k, \rS = b) = F\left(F^{-1}\left(F_Y(y \mid \rT = 1, \rS = b)\right) - 
+                                       \eshiftparm_k\right), \quad k = 2, \dots, K
+\end{eqnarray}
+%%
+describes different distributions by means of shift parameter on a latent
+scale defined by $F$.  The negative shift term ensures that positive values
+of $\eshiftparm_k$ correspond to the situation of outcomes being
+stochastically larger in group $k$ compared to control.  The shift
+parameters are invariant with respect to monotone transformations of the
+response values, that is, transforming the observations of all treatment
+groups by the same function does not affect the values of $\eshiftparm_k$. 
+The choice $F(z) = \exp(-\exp(-z))$ gives rise to $m_\text{L}$, $F(z) = 1 -
+\exp(-\exp(z))$ corresponds to $m_\text{PH}$, $F = \text{expit}$ leads to
+$m_\text{PO}$, and $F = \Phi$ results in $m_\text{Cd}$.  The choice of $F$
+is made a priori and determines the interpretation of $\eshiftparm_k$.
+
+We are interested in inference for $\eshiftparm_2, \dots, \eshiftparm_K$, in
+terms of confidence intervals and hypothesis tests of the form
+%%
+\begin{eqnarray*}
+& & H_0: \eshiftparm_k - \mu_k = 0, \text{``two.sided''}, \quad k = 2, \dots, K, \\
+& & H_0: \eshiftparm_k - \mu_k \ge 0, \text{``less''}, \quad k = K = 2, \\
+& & H_0: \eshiftparm_k - \mu_k \le 0, \text{``greater''}, \quad k = K = 2,
+\end{eqnarray*}
+%%
+with the latter two options only for the two-sample case ($K = 2$). The null
+values $\mu_k, k = 2, \dots, K$ allow testing hypotheses about specific
+values of the shift parameters (and can be specified as argument \Rcmd{mu} to
+\code{free1way}).
+
+As before, for an ordered categorical outcome $Y$ from sample space $\samY =
+\{\upsilon_1 < \upsilon_2 < \cdots < \upsilon_C\}$, we parameterise the
+model in terms of intercept ($\vartheta_\cdot$) and shift
+($\eshiftparm_\cdot$) parameters \begin{eqnarray*} F_Y(\upsilon_c \mid \rT =
+k, \rS = b) = F(\vartheta_{c,b} - \eshiftparm_k), \quad c = 1, \dots, C,
+\end{eqnarray*} that is, we replace the transformed control outcome
+$F^{-1}\left(F_Y(\upsilon_c \mid \rT = 1, \rS = b)\right) = \vartheta_{c,b}$
+with a corresponding intercept parameter.  These $C - 1$ intercept
+parameters are block-specific and monotone increasing $\vartheta_{0,b} =
+-\infty < \vartheta_{1,b} < \cdots < \vartheta_{C,b} = \infty$ within each
+block $b = 1, \dots, B$.  We collect all model parameters in a vector
+%%
+\begin{eqnarray*}
+\thetavec = (\theta_1 & := & \eshiftparm_2, \\
+               & \dots & , \\
+               \theta_{K - 1} & := & \eshiftparm_K, \\
+               \theta_{K} & := & \vartheta_{1,1}, \\
+               \theta_{K + 1} & := & \vartheta_{2,1} > \vartheta_{1,1}, \\
+               &  \dots, & \\
+               \theta_{K + C - 2} & := & \vartheta_{C-1,1} > \vartheta_{C-2,1}, \\
+               \theta_{K + C - 1} & := & \vartheta_{1,2}, \\
+               & \dots &, \\
+               \theta_{B (C - 1) + K - 1} & := & \vartheta_{C-1,B} >
+               \vartheta_{C-2,B}).
+\end{eqnarray*}
+%%
+If there is no observation for level $c$ in block $b$, the corresponding
+parameter is not identified and removed from $\thetavec$ (exceptions apply
+when penalised estimation is performed, see Appendix~\ref{app:Jeffrey}). 
+The parameter space is defined by all parameter vectors $\thetavec$
+satisfying the monotonicity of the intercept parameters.  Violations always
+lead to the log-likelihood function being undefined and thus taking the
+value $-\infty$.  For the $i$th observation $(y_i = \upsilon_c, \rt_i = k,
+s_i = b)$ from block $b$ under treatment $k$, the log-likelihood
+contribution is
+%%
+\begin{eqnarray} \label{fm:f1wll}
+\log(\Prob(\upsilon_{c - 1} < Y \le \upsilon_c \mid \rT = k, \rS = b)) = \log(F(\vartheta_{c,b} - \eshiftparm_k) - F(\vartheta_{c - 1,b} - \eshiftparm_k))
+\end{eqnarray}
+%%
+with $\upsilon_0 = -\infty$.  For an absolutely continuous outcome $Y \in
+\RR$, we define $\upsilon_c := y_{(c)}$, the $c$th distinct ordered
+observation in the sample.  The log-likelihood above is then the empirical
+or nonparametric log-likelihood.  If observations were independently
+right-censored, the contribution of the event $Y > \tilde{y}$ to the
+log-likelihood is
+%%
+\begin{eqnarray*}
+\log(\Prob(Y > \tilde{y} \mid \rT = k, \rS = b)) = \log(1 - F(\vartheta_{c - 1,b} - \eshiftparm_k))
+\end{eqnarray*}
+%%
+where $\upsilon_{c - 1} = \max \{\upsilon \in \samY \mid \upsilon \le
+\tilde{y}\}$, that is, observations right-censored between $\upsilon_{c -
+1}$ and $\upsilon_c$ correspond to the parameter $\vartheta_{c - 1,b}$.
+
+Maximising this form of the log-likelihood leads to semiparametrically
+efficient estimators \citep[Chapter 15.5,][]{vdVaart1998}.  In this
+framework, tests against deviations from the hypothesis $H_0$ above are
+locally most powerful rank tests, for example against proportional odds ($F
+= \text{expit})$ or proportional hazards alternatives \citep[$F(z) = 1 -
+\exp(-\exp(z))$,][Example 15.16]{vdVaart1998}.
+
+Based on the score function $S(\delta_2, \dots, \delta_K)$ and the Fisher
+information $\eFI(\delta_2, \dots, \delta_K)$, which can be derived in the
+exact same way as presented for the proportional odds model
+(Section~\ref{sec:scores}), maximum likelihood estimates $\hat{\delta_2},
+\dots, \hat{\delta}_K$ can be supplemented by Wald and likelihood ratio
+tests and confidence intervals as well as likelihood- and permutation-based
+Rao score tests and intervals.  The power function for the Wald test can be
+evaluated relatively quickly by means of a small simulation for estimating
+the inverse Fisher information $\eFI(\delta_2, \dots, \delta_K)$ for a given
+alternative, sample size, and control distribution.
+
+\section{Implementation} \label{sec:impl}
+
+Maximum likelihood estimation and parameter inference for
+model~(\ref{fm:free1way}) is implemented in \code{free1way} under the
+following principles.  Data is represented in form of a $C \times K \times
+B$ contingency table, whose element $(c, k, b)$ is the number of
+observations with configuration $(y = y_c, \rt = k, s = b)$.  In the
+presence of right-censoring, a fourth dimension is added ($C \times K \times
+B \times 2)$ whose first $C \times K \times B$ table presents
+right-censoring and the second table contains numbers of events.  The code,
+roughly $2600$ lines, was written in \proglang{R} exclusively, only
+importing functionality from \pkg{Matrix} \citep{Matrix}.
+
+Lessons learned from existing implementations of some aspects of
+model~(\ref{fm:free1way}) have been taken into account.  Because the
+likelihood (\ref{fm:loglik}) for a nonparametric version of the
+transformation function $\h$ is equivalent to the likelihood of a
+proportional odds model for ordered categorical outcomes, the nonparametric
+maximum likelihood estimators $\hat{\eshiftparm}$ and $\hat{\parm}$ along
+with $A(\eshiftparm_0, \hat{\parm}(\eshiftparm_0))_{\eshiftparm,
+\eshiftparm}$ can be computed from \code{polr} or \code{tram::Polr}
+\citep{HothornMoestBuehlmann2017,Hothorn_2020}, simply by fitting the model to ordered
+categories obtained by representing a numeric response as an ordinal factor. 
+The same likelihood is implemented for numeric responses in \code{rms::orm}
+\citep{rms} which provides an implementation of the model for continuous
+responses \citep{Liu_Shepherd_Li_2017}.  Only \code{Polr} allowed
+stratification and permutation-based inference so far.
+
+The restricted maximum likelihood estimator $\hat{\parm}(\eshiftparm_0)$ can
+also be computed from these functions (using $\eshiftparm_0 x_i$ as an
+offset), only the computation of $A(\eshiftparm_0,
+\hat{\parm}(\eshiftparm_0))_{\eshiftparm, \eshiftparm}$ is not commonly
+implemented.  The term $\FI(\eshiftparm_0,
+\hat{\parm}(\eshiftparm_0))_{\eshiftparm, \parm} \FI(\eshiftparm_0,
+\hat{\parm}(\eshiftparm_0))_{\parm, \parm}^{-1} \FI(\eshiftparm_0,
+\hat{\parm}(\eshiftparm_0))_{\eshiftparm, \parm}^\top$ is relatively simple
+to compute, because $\FI(\eshiftparm_0, \hat{\parm}(\eshiftparm_0))_{\parm,
+\parm}$ is a tri-banded matrix.  When the number of distinct observations
+$C$ is large, the corresponding number of $\parm$ parameters is, in the
+worst case scenario, growing with $N$.  In contrast to all other
+implementations, \code{orm} leveraged the tri-banded structure of the
+Hessian and employs a Newton-Raphson algorithm where parameter updates for
+tens of thousands of parameters can be computed very fast thanks to
+corresponding solvers being available in \pkg{Matrix}.  The
+\proglang{FORTRAN} code underlying \code{orm}, and the extensive evaluation
+of unconstrained optimisation in this context by \cite{Harrell2024},
+inspired much of the tailored optimisation procedures implemented in
+\code{free1way}.  Appendices~\ref{app:vign} and \ref{app:optim} provide more
+detail regarding these aspects.
+
+\section{Pain Reduction using free1way}
+
+Performing several potentially interesting analyses of the neck pain
+randomised trial based on model~(\ref{fm:free1way}) by means of
+\code{free1way}, we explain how this novel implementation can help to
+address some methodological difficulties \citep[such as those raised
+in][]{chow_heller_2006} and how unification of concepts and procedures
+scattered across different \code{stats::*.test} functions previously is
+achieved.
+
+\subsection{Diagnostic Checking}
+
+Before we use \code{free1way} to fit a proportional odds model corresponding
+to the Wilcoxon test presented in Section~\ref{sec:neck}, we assess if the
+data are in line with the proportional odds assumption in two ways.  The
+simplest idea is to reformulate model~(\ref{fm:polr}) as
+%%
+\begin{eqnarray*}
+\logit\left(\Prob(\rY \le \ry \mid X = x)\right) = \h(\ry \mid \parm) - \eshiftparm x
+\end{eqnarray*}
+%%
+and check if the two empirical distribution functions fitted to VAS
+separately in the two groups are roughly parallel on the logit-scale. 
+Unlike plotting functionality for the ECDF in packages \pkg{stats} or
+\pkg{latticeExtra}, the \code{plot} method for \Rcmd{survfit} objects from
+the \pkg{survival} package \citep{survival1} allows plotting on
+user-supplied ordinate scales and thus, because the Kaplan-Meier estimator
+computed by \code{survival::survfit} is identical to the ECDF in the absence
+of right-censoring, we can misuse this functionality for our purposes in
+Figure~\ref{fig:diag1}.  The two resulting step functions are reasonably
+parallel and thus assuming proportional odds is appropriate.  We come back
+to diagnostic testing once we have the fitted model in place.
+
+\begin{figure}[ht!]
+%%
+<<po, echo = TRUE, width = 5, height = 5, fig = TRUE>>=
+w12 <- cbind(subset(pain, time == "12 weeks"), ev = TRUE)
+plot(survfit(Surv(vas, ev) ~ laser, data = w12),
+     conf.int = FALSE, mark.time = FALSE, 
+     fun = function(p) qlogis(p, lower.tail = FALSE),
+     col = cols, las = 1, main = "12 weeks",
+     xlab = "Neck pain (on visual analogue scale)",
+     ylab = "Distribution function on logit scale")
+legend("bottomright", legend = levels(w12$laser), col = cols,
+       lty = 1, bty = "n", title = "Empirical")
+@
+%%
+\caption{Low-level laser therapy against chronic neck pain
+\citep{chow_heller_2006} data: Check of proportional odds assumption. The
+empirical cumulative distribution functions for both treatment groups are
+plotted on the logit-scale.
+\label{fig:diag1}}
+\end{figure}
+
+
+%%
+<<free1waytmp, echo = FALSE>>=
+f <- free1way(vas ~ laser, data = pain, subset = time == "12 weeks")
+@
+%%
+We proceed by fitting the proportional odds model, that is, we estimate a
+log-odds ratio $\delta = \delta_2$ in addition to $C - 1 =
+\Sexpr{length(f$intercepts[[1L]])}$ increasing threshold parameters $\parm$
+by maximising the empirical likelihood, requesting the exact permutation
+distribution to be computed in addition
+%%
+<<free1way>>=
+f <- free1way(vas ~ laser, data = pain, subset = time == "12 weeks", 
+              exact = TRUE)
+@
+%%
+We add a visualisation of these parameters to Figure~\ref{fig:diag1},
+enriching this model-free plot with the two, now model-based yet
+distribution-free or ``semi-parametric'', step-functions $\h(\ry \mid
+\hat{\parm})$ for the placebo group and $\h(\ry \mid \hat{\parm}) -
+\hat{\eshiftparm}$ for the active group in Figure~\ref{fig:model}.  The
+model-free (solid) and model-based (dashed) lines, the latter featuring a
+constant vertical shift $\hat{\delta}$, are almost perfectly in line and
+thus, with any potential worries about model fit out of our way, we can
+start interrogating the fitted model.
+
+We first assess if the log-likelihood is identical to the log-likelihood
+of the model estimated by \code{polr}
+%%
+<<loglik>>=
+### polr
+logLik(p)
+### free1way
+logLik(f)
+### number of log-odds ratio + intercept parameters
+length(coef(f)) + length(f$intercepts[[1L]])
+@
+%%
+where \Rcmd{df} is the number of total parameters (log-odds ratio
+$\eshiftparm$ and intercepts $\parm$) but not the degrees of freedom,
+because of the monotonicity constraint on $\parm$.  We can also check if the
+parameter estimates and the standard errors are reasonably close
+%%
+<<coef>>=
+all.equal(coef(p), coef(f))
+all.equal(p$zeta, f$intercepts[[1L]], check.attributes = FALSE)
+all.equal(vcov(p)[names(coef(p)),names(coef(p)), drop = FALSE], 
+          vcov(f), check.attributes = FALSE)
+@
+%%
+
+
+\begin{figure}[ht!]
+%%
+<<fplot, echo = FALSE, width = 5, height = 5, fig = TRUE>>=
+<<po>>
+su <- sort(unique(w12$vas))
+lines(su[-length(su)], f$intercepts[[1]], 
+      type = "s", lty = 2, col = cols["Placebo"])
+lines(su[-length(su)], f$intercepts[[1]] - coef(f), 
+      type = "s", lty = 2, col = cols["Active"])
+legend("topleft", legend = levels(w12$laser), col = cols, 
+       lty = 2, bty = "n", title = "Model-based")
+suq <- quantile(w12$vas, prob = 1:3 / 4)
+out <- sapply(suq, function(q) {
+    px <- f$intercepts[[1]][which.min((su - q)^2)]
+    arrows(q, px, q, px - coef(f), code = 3, length = .1, angle = 45)
+    text(q, px - coef(f) + .5, labels = expression(hat(delta)))
+})
+@
+%%
+\caption{Low-level laser therapy against chronic neck pain
+\citep{chow_heller_2006} data: Check of proportional odds assumption with
+empirical and model-based logit-transformed distribution functions. The
+vertical distance between the model-based step-functions is constant at 
+$\mid \hat{\eshiftparm} \mid = \Sexpr{frmt3(abs(coef(f)))}$.
+\label{fig:model}}
+\end{figure}
+
+\subsection{Permutation Inference}
+
+We compute an exact permutation $p$-value and corresponding permutation
+confidence interval for $\delta$.  The exact conditional $p$-value testing
+$H_0: \delta = 0$ is identical to the one reported by \code{wilcox.test} in
+Section~\ref{sec:neck}, however, parameter estimate and confidence interval
+are now reported for log-odds ratios
+%%
+<<free1wayperm>>=
+(sf <- summary(f, test = "Permutation"))
+coef(f)
+confint(f, test = "Permutation")
+@
+%%
+With a negative value of $\hat{\delta} = \Sexpr{frmt3(coef(f))}$ (which is
+identical to the estimate $\hat{\delta} = \Sexpr{frmt3(coef(p))}$ provided
+by \code{polr}), pain measured by VAS was lower in the active group compared
+to the placebo group.  Because of the invariance of the maximum likelihood
+estimator and the score interval with respect to monotone transformations,
+we can report the score inference results for odds ratios
+%%
+<<free1waypermOR>>=
+(OR <- exp(coef(f)))
+(ciOR <- exp(confint(f, test = "Permutation")))
+@
+%%
+concluding that the odds of observing pain on the VAS at most as large as
+$\ry$ four weeks after the end of active laser treatment is about half as
+large as the corresponding odds in the placebo group, with an uncertainty
+ranging from a relative odds reduction between $\Sexpr{round(ciOR[1L] * 100)}\%$ 
+and $\Sexpr{round(ciOR[2L] * 100)}\%$.
+
+Closer to the ``Wilcoxon parameter'' $\Prob(\text{VAS}_\text{Placebo} <
+\text{VAS}_\text{Active}) + \nicefrac{1}{2}\Prob(\text{VAS}_\text{Placebo} =
+\text{VAS}_\text{Active})$ for a pair of patients sampled independently from
+the two groups is the model-based probabilistic index (PI), also known as
+the area under the receiver operating characteristic (ROC) curve (AUC),
+again being a monotone transformation of $\delta$ and thus a permutation
+score interval being available
+%%
+<<free1waypermAUC>>=
+coef(f, what = "AUC")
+confint(f, test = "Permutation", what = "AUC")
+@
+%%
+Interestingly, not only the model-based AUC but also the model-based ROC
+curve is a simple function of $\delta$ \citep[see][]{SewakHothorn2023},
+opening up a second possibility for assessing the proportional odds
+assumption.  We compare the probability-probability plot or empirical ROC
+curve with the model-based ROC curve in Figure~\ref{fig:ROC} utilising the
+novel \code{ppplot} function added to the \pkg{stats} package in
+\proglang{R} 4.6.0.  The empirical and model-based
+ROC curves are quite close, so no red flags regarding lack of fit of the
+proportional odds model are raised by this additional diagnostic tool.
+
+\begin{figure}[ht!]
+%%
+<<gof, width = 5, height = 5, fig = TRUE>>=
+x <- subset(pain, subset = time == "12 weeks")
+with(split(x$vas, x$laser), 
+     ppplot(Active, Placebo, conf.level = .95, 
+            main = "Visual Analogue Scale at 12 weeks"))
+@
+%%
+\caption{Low-level laser therapy against chronic neck pain
+\citep{chow_heller_2006} data: Probability-probability plot (dots) and
+model-based receiver operating characteristic (ROC) curve (lines, with
+$95\%$ confidence band). \label{fig:ROC}}
+\end{figure}
+
+Another interesting estimand is the overlap coefficient, the integral over
+the minimum of the two, in case of VAS Lebesque, densities
+%%
+<<free1waypermOVL>>=
+coef(f, what = "OVL")
+confint(f, test = "Permutation", what = "OVL")
+@
+%%
+This measure is between zero, \ie~a complete separation of VAS in the two
+groups, and one for identical VAS distributions.  The interesting feature
+here is that we do not have to estimate the two densities directly, under
+the proportional odd assumption \citep{SewakHothorn2023}.
+
+By changing the confidence level to the $p$-value, we can check if the
+$p$-values and confidence intervals are congruent, \ie~$\eshiftparm_0$ is
+contained in an $(1 - \alpha) \times 100\%$ confidence interval iff the
+$p$-value testing $H_0: \eshiftparm = \eshiftparm_0$ is smaller than the
+nominal level $\alpha$. This works reasonably well for permutation
+confidence intervals, where the upper bound of the $(1 - p\text{-value})
+\times 100\% = \Sexpr{frmt3((1 - sf$p.value) * 100)}\%$ confidence interval
+is close to zero
+%%
+<<free1waypermCI>>=
+confint(f, level = 1 - sf$p.value, test = "Permutation")
+@
+%%
+Computing tests and confidence intervals using identical inference
+procedures in \code{free1way} ensures that conclusions about effects drawn
+from tests are in line with effect sizes obtained from confidence intervals.
+
+\subsection{Likelihood Inference}
+
+For larger sample sizes or under the population model with a priori fix
+groups, classical likelihood inference procedures can be performed by
+changing the \Rcmd{test} argument in the \code{summary} and \code{coef}
+methods.  Rao score tests and intervals are available from
+%%
+<<free1wayRao>>=
+summary(f, test = "Rao")
+confint(f, test = "Rao")
+@
+%%
+likelihood-ratio tests and intervals from
+%%
+<<free1wayLRT>>=
+summary(f, test = "LRT")
+confint(f, test = "LRT")
+@
+%%
+and Wald tests and intervals from
+%%
+<<free1wayWald>>=
+summary(f, test = "Wald")
+confint(f, test = "Wald")
+@
+%%
+Asymptotically, these three procedures are known to provide the same
+results, but finite sample differences can be quite substantial.  Only score
+and likelihood ratio inference is invariant with respect to monotone
+transformations, and should be applied when results are reported for
+functions of $\delta$.
+
+\subsection{Power and Sample Size}
+
+Other researchers trying to replicate the above results in an independent
+trial may ask what sample size would be needed to reproduce the same effect
+size with a certain power.  The novel \code{power.free1way.test} function
+implements the power function of the Wald test based on simulation-based
+estimates of standard errors as a function of effect size (argument
+\Rcmd{delta}), sample size in each group (argument \Rcmd{n}), and nominal
+level $\alpha$ (argument \Rcmd{sig.level}).  Because these simulations can
+be performed relatively quickly, the power function can be solved for the
+sample size if the requested power is specified:
+%%
+<<power>>=
+(pt <- power.free1way.test(delta = coef(f), power = .8, sig.level = .05))
+@
+%%
+Because this result for the Wald test is not exact, study designers would
+check if the power of the planned inference procedure (such as an asymptotic
+permutation test) is in fact close to the power requested by performing a
+simulation study directly estimating the power.  Function \code{rfree1way}
+can be used to sample, by default continuous, response values under a given
+model, in our case a proportional odds model with given log-odds ratio
+%%
+<<simulation, eval = FALSE>>=
+ex <- expression({
+    df <- rfree1way(n = pt$n, delta = pt[["log-odds ratio"]])
+    summary(free1way(y ~ groups, data = df), 
+            test = "Permutation")$p.value
+})
+pvals <- replicate(1000, eval(ex))
+binom.test(x = sum(pvals < pt[["sig.level"]]), n = length(pvals), 
+           p = pt[["power"]])$conf.int
+@
+%% Save CRAN checking time
+\begin{Schunk}
+\begin{Sinput}
+R> ex <- expression({
++      df <- rfree1way(n = pt$n, delta = pt[["log-odds ratio"]])
++      summary(free1way(y ~ groups, data = df), 
++              test = "Permutation")$p.value
++  })
+R> pvals <- replicate(1000, eval(ex))
+R> binom.test(x = sum(pvals < pt[["sig.level"]]), n = length(pvals), 
++             p = pt[["power"]])$conf.int
+\end{Sinput}
+\begin{Soutput}
+[1] 0.788472 0.837664
+attr(,"conf.level")
+[1] 0.95
+\end{Soutput}
+\end{Schunk}
+%%
+which suggests that such a replication trial with substantially larger
+sample size compared to the initial study would achieve the desired power. 
+As a means to increase precision, \cite{chow_heller_2006} performed
+covariate-adjustment for baseline VAS, and we will implement this idea using
+stratification in the next section.
+
+\subsection{Stratification}
+
+Before we begin, we follow Section~2.10 in~\cite{chow_heller_2006} and
+categorise VAS measurements at all three time points into an ordinal
+variable at four levels of increasing pain
+%%
+<<vasO>>=
+pain$vasO <- cut(pain$vas, breaks = c(-Inf, .3, .6, .8, Inf), 
+                 ordered_result = TRUE, 
+                 labels = c("None to mild", "Moderate", 
+                            "Moderately severe", "Severe"))
+@
+%%
+Baseline pain is then added as a stratum variable to all patients
+%%
+<<vasBL>>=
+xB <- subset(pain, time == "Baseline")
+pain$vasBL <- xB$vasO[match(pain$id, xB$id)]
+class(pain$vasBL) <- "factor"
+@
+%%
+We repeat the proportional odds model analysis now separately in the four
+strata defined by ordinal baseline VAS assuming that the log-odds ratio is
+the same in all four strata.  Unfortunately, the exact stratified permutation
+distribution is not yet implemented, so we use a larger
+number of random permutation in each stratum to approximate this
+distribution allowing permutation-based inference for the common odds ratio
+%%
+<<free1wayS, message = FALSE>>=
+fb <- free1way(vas ~ laser | vasBL, data = pain, 
+               subset = time == "12 weeks", B = 10000)
+summary(fb, test = "Permutation")
+exp(coef(fb))
+exp(confint(fb, test = "Permutation"))
+@
+%%
+This stratified, or conditional, odds ratio estimate is smaller than the
+marginal odds ratio and less variable, however, the two estimands are not
+directly comparable because the model is noncollapsible.
+
+Because the proportional odds model and its empirical likelihood describe
+and handle continuous and ordinal responses in the very same way, we can
+repeat the analysis with the response on the four pain levels
+%%
+<<free1wayO, message = FALSE>>=
+fO <- free1way(vasO ~ laser | vasBL, data = pain, 
+               subset = time == "12 weeks", B = 10000)
+summary(fO, test = "Permutation")
+exp(coef(fO))
+exp(confint(fO, test = "Permutation"))
+@
+%%
+The results are very close, especially when comparing the two confidence
+intervals.  This might encourage the designers of the replication study to
+simplify pain assessment by asking study participants if the pain they
+suffer is \Sexpr{paste(paste0("``", levels(pain$vasO)[seq_len(nlevels(pain$vasO) - 1)], "''"), collapse = ",")}, or 
+\Sexpr{paste0("``", levels(pain$vasO)[nlevels(pain$vasO)], "''")}
+instead of going all-in with VAS examinations.  We might wonder what the
+impact on the required sample size for a potential replication study might
+be when using an ordinal response under stratification for ordinal baseline
+pain.  We first estimate the pain distribution under placebo in the four
+strata
+
+%%
+<<placebo>>=
+(btab <- xtabs(~ vasO + vasBL, data = pain, 
+               subset = laser == "Placebo" & time == "12 weeks")[,4:1])
+colSums(btab)
+(ptab <- prop.table(btab, margin = 2))
+@
+%%
+Because only one patient with severe baseline pain remained at this pain
+level, we remove the first stratum for the sample size planning.  The number
+of patients in first pain levels at baseline are twice as large compared to
+the number of baseline patients with moderately severe pain, we use the
+latter stratum as the first one and double the sample size in the other two
+strata (argument \Rcmd{strata\_ratio}).  Furthermore, we define the discrete
+four point distribution of the pain response for the control group, so that
+the power of the Wald test for ordinal responses will be approximated in
+this call to \code{power.free1way.test}
+
+%%
+<<powerb>>=
+(pbt <- power.free1way.test(prob = ptab[,-1], strata_ratio = c(2, 2),
+                            delta = coef(fO), power = .8, 
+                            sig.level = .05))
+@
+%%
+
+Because the power function is highly discrete in small $n$, the requested
+power cannot be achieved exactly.  In any case, the number of patients to be
+enrolled in such a trial would be much smaller than the two times $n =
+\Sexpr{pt[["n"]]}$ necessary in a trial without stratification.
+
+\subsection{Analysing Binary Responses}
+
+Although we saw that converting continuous VAS to an ordinal variable at
+four levels did not change the results substantially going further analysing
+VAS dichotomised as $\text{VAS} \le .6$ is probably overdoing it.  However,
+for binary responses in a two-arm trial, the stratified proportional odds
+model is identical to the model underlying the Cochran-Mantel-Haenszel test:
+
+%%
+<<mh>>=
+mh <- free1way(vasB ~ laser | vasBL, data = pain, 
+               subset = time == "12 weeks")
+summary(mh, test = "Permutation")$p.value
+xt <- xtabs(~ vasB + laser + vasBL, 
+            data = pain, subset = time == "12 weeks")
+mantelhaen.test(xt, correct = FALSE, exact = FALSE)$p.value
+@
+%%
+
+Indeed, the asymptotic score permutation test coincides with the
+Cochran-Mantel-Haenszel test uncorrected for small samples \citep[without
+continuity correction, as demonstrated by][]{DayByar1979}.
+
+The two estimates of the common odds ratio and their confidence intervals
+are not identical, because the Mantel-Haenszel and conditional maximum
+likelihood estimator \citep{MehtaPatel1985} reported by
+\code{mantelhaen.test} are not identical to the maximum likelihood estimator
+computed by \code{free1way}.
+
+%%
+<<mhOR>>=
+### Mantel-Haenszel
+mantelhaen.test(xt, correct = FALSE, exact = FALSE)$estimate
+### Conditional ML
+mantelhaen.test(xt, correct = FALSE, exact = TRUE)$estimate
+### ML
+exp(coef(mh))
+@
+%%
+
+The latter estimator and corresponding inference is only valid when the
+number of blocks is fixed and the sample size grows within each block.  For
+many strata with low number of observations, with matched-pairs designs
+being the most extreme example, this is typically not the case as the number
+of blocks corresponds to the number of observations and thus sample size. 
+In this case, the maximum likelihood estimator computed by \code{free1way}
+is known to suffer finite sample bias and both the Mantel-Haenszel and
+conditional maximum likelihood estimator correct this bias.  The phenomenon
+also occurs for ordered categorical outcomes \citep{LiuAgresti1996}.  One
+possible remedy to this problem is discussed in the next section and in
+Appendix~\ref{app:Jeffrey}.
+
+\subsection{Repeated Measures Analyses}
+
+The analyses presented so far compare two conditional pain distributions
+observed in the two treatment groups and thus, by definition, assess the
+treatment effect for groups of patients.  It is hard to say something about
+the pain reduction in single patients.  Therefore, in our final analysis, we
+look at the study from a complete different angle, treating the three pain
+measurements on the VAS as repeated measurements.  In the formulation of
+model~(\ref{fm:free1way}), each patient is its own block or stratum.  This
+is dangerous, because now the sample size within blocks is fixed (and equal
+to one) whereas the number of blocks grows with number of patients.  For
+ordinal outcomes like VAS, \cite{LiuAgresti1996} described the bias inherent
+in the estimation procedure implemented in \code{free1way}.  We will now
+discuss how we can still make use of \code{free1way} to analyse such
+repeated measurement data.
+
+We first look at the data from a slightly different perspective, by
+comparing the individual pain measurements to baseline pain in
+Figure~\ref{fig:base}.  Almost all patients under active laser treatment
+reported a pain reduction after seven weeks.  In contrast, more than half
+the number of patients in the placebo group reported more pain in this
+period of time.  After 12 weeks, the pain reduction in the active group is
+still substantial whereas the variability seemed to have increased in the
+placebo group.
+
+\begin{figure}[ht!]
+\begin{center}
+%%
+<<indivplot, echo = FALSE, width = 5, height = 5, fig = TRUE>>=
+pain$vasBLorg <- xB$vas[match(pain$id, xB$id)]
+print(xyplot(vas ~ vasBLorg | time + laser, 
+       data = subset(pain, time != "Baseline"),
+       panel = function(x, y, ...) {
+           panel.abline(a = 0, b = 1, col = "grey")
+           panel.xyplot(x, y, ...)
+           ltext(.1, .9, label = paste0(round(mean(y < x) * 100), "%"))
+       }, xlab = "Baseline neck pain (on visual analogue scale)",
+       ylab = "Neck pain (on visual analogue scale)"))
+@
+%%
+\caption{Low-level laser therapy against chronic neck pain
+\citep{chow_heller_2006} data: Comparison to follow-up pain measurements to
+baseline pain in two treatment groups. The percentages refer to the fraction
+of patients reporting an improvement (follow-up VAS $<$ baseline VAS).\label{fig:base}}
+\end{center}
+\end{figure}
+
+We assume a patient-specific yet common log-odds ratio $\delta_2$ comparing
+pain at the end of treatment with baseline and a common log-odds ratio
+$\delta_3$ comparing the pain four weeks after end of treatment with
+baseline for all patients in the placebo group.  In contrast to the model
+employed before, the parameters $\delta_2$ and $\delta_3$ do not compare the
+treatment-specific but the patient-specific distribution functions of VAS. 
+Treating patients as blocks allows each patient to carry his or her own
+baseline VAS distribution function, from which we only sample one
+observation.  This also means that each patient comes with her or his own
+VAS distribution at seven or $12$ weeks.  We make the strong assumption
+that, for each patient, the follow-up VAS distributions are linked to the
+baseline VAS distribution of this patient in terms of a proportional odds
+model with, now common to all patients, log-odds ratio $\delta_2$ (seven
+weeks) and $\delta_3$ ($12$ weeks).  In the same way, such effects also
+exists in the active laser group (let's call them $\tilde{\delta}_2$ and
+$\tilde{\delta}_3$), so we perform the analysis twice, starting with the
+placebo group testing the hypothesis $H_0: \delta_2 = \delta_3 = 0$:
+%%
+<<friedmanP>>=
+fP <- free1way(vas ~ time | id, data = pain, 
+               subset = laser == "Placebo" & !(id %in% miss))
+unlist(summary(fP, test = "Permutation")[c("statistic", "p.value")])
+painP <- subset(pain, laser == "Placebo" & !(id %in% miss))
+painP$id <- painP$id[,drop = TRUE]
+unlist(friedman.test(vas ~ time | id, 
+                     data = painP)[c("statistic", "p.value")])
+@
+%%
+This gives exactly the same results as \code{friedman.test} when we remove
+the observations with missing values from the data, because
+\code{friedman.test} only works for full-factorial designs.  There is no
+evidence against the null hypothesis here, so pain in patients in the
+placebo group does not change over time.  Limiting this analysis to two time
+points (baseline and 12 weeks) and VAS dichotomised at $.6$, the permutation
+score test is identical to McNemar's test without continuity correction. 
+The only relevant information here is the number of patients who switched
+from VAS larger than $.6$ to VAS at most as large as $.6$ and vice versa
+%%
+<<mcnemar>>=
+summary(free1way(vasB ~ time | id, data = pain, 
+                 subset = laser == "Placebo" & time != "7 weeks"), 
+        test = "Permutation")$p.value
+xt <- xtabs(~ vasBL + vasB, data = pain, 
+             subset = laser == "Placebo" & time != "7 weeks")
+xt <- rbind(colSums(xt[1:2,]), colSums(xt[3:4,]))
+mcnemar.test(xt, correct = FALSE)$p.value
+@
+%%
+
+For the active laser group, the repeated measurements analysis leads to a
+clear rejection of the null $H_0: \tilde{\delta}_2 = \tilde{\delta}_3 = 0$
+for the response on the original VAS scale
+%%
+<<friedmanA>>=
+fA <- free1way(vas ~ time | id, data = pain, 
+               subset = laser == "Active" & !(id %in% miss))
+unlist(summary(fA, test = "Permutation")[c("statistic", "p.value")])
+painA <- subset(pain, laser == "Active" & !(id %in% miss))
+painA$id <- painA$id[,drop = TRUE]
+unlist(friedman.test(vas ~ time | id, 
+                     data = painA)[c("statistic", "p.value")])
+@
+%%
+but it remains unclear how large the trend to, hopefully (there is no
+direction of effects in $p$-values), less pain actually is.  In addition,
+this analysis does not contrast the temporal trend in the active laser group
+with the trend in the placebo group.
+
+The permutation $p$-values are valid, because they exclusively rely on
+parameters estimated under the constraints formulated by the null hypotheses
+($\delta_2 = \delta_3 = 0$) and thus the bias for these log-odds ratios
+described by \cite{LiuAgresti1996} cannot occur.  Of course, fitting the
+unrestricted model, parameter estimates for the log-odds ratios will be
+biased and thus also confidence intervals will suffer from this problem.  We
+can try to debias the maximum likelihood estimates, for example by adding a
+penalty term to the log-likelihood function.  One possibility is to use an
+idea similar to Firth's correction in generalised linear models
+\citep{Firth1993,KosmidisFirth2020}, essentially penalising the
+log-likelihood using a penalty term defined by the determinant of the Fisher
+information matrix (also known as Jeffrey's prior), further details are
+provided in Appendix~\ref{app:Jeffrey}.
+
+We re-fit the two models to all patients treated in the two arms, compare
+the parameter estimates and compute the contrast of interest for the
+penalised parameters.  We start with the actively treated group
+%%
+<<MPL-A, eval = FALSE>>=
+fA <- free1way(vas ~ time | id, data = pain, 
+               subset = laser == "Active" & !(id %in% miss))
+fAp <- free1way(vas ~ time | id, data = pain, 
+                subset = laser == "Active" & !(id %in% miss), 
+                MPL_Jeffreys = TRUE)
+cbind(unpenalised = coef(fA), penalised = coef(fAp))
+@
+%%
+\begin{Schunk}
+\begin{Sinput}
+R> fA <- free1way(vas ~ time | id, data = pain, 
++                 subset = laser == "Active" & !(id %in% miss))
+R> fAp <- free1way(vas ~ time | id, data = pain, 
++                  subset = laser == "Active" & !(id %in% miss), 
++                  MPL_Jeffreys = TRUE)
+R> cbind(unpenalised = coef(fA), penalised = coef(fAp))
+\end{Sinput}
+\begin{Soutput}
+             unpenalised penalised
+time7 weeks     -5.53997  -1.63711
+time12 weeks    -4.25218  -1.17997
+\end{Soutput}
+\end{Schunk}
+%%
+The log-odds ratios comparing the seven and $12$ weeks time points with
+baseline are all negative, thus pain was reduced, however, more so after
+seven weeks.  The penalised log-odds ratios are much smaller and reasonable.
+
+For the placebo group, we obtain (with one warning indicating that the
+optimiser tried to evaluate the likelihood~(\ref{fm:f1wll}) for a
+configuration of the parameters violating the constraints)
+%%
+<<MPL-P, warning = FALSE, eval = FALSE>>=
+fP <- free1way(vas ~ time | id, data = pain, 
+               subset = laser == "Placebo" & !(id %in% miss))
+fPp <- free1way(vas ~ time | id, data = pain, 
+                subset = laser == "Placebo" & !(id %in% miss), 
+                MPL_Jeffreys = TRUE)
+cbind(unpenalised = coef(fP), penalised = coef(fPp))
+@
+%%
+\begin{Schunk}
+\begin{Sinput}
+R> fP <- free1way(vas ~ time | id, data = pain, 
++                 subset = laser == "Placebo" & !(id %in% miss))
+R> fPp <- free1way(vas ~ time | id, data = pain, 
++                  subset = laser == "Placebo" & !(id %in% miss), 
++                  MPL_Jeffreys = TRUE)
+R> cbind(unpenalised = coef(fP), penalised = coef(fPp))
+\end{Sinput}
+\begin{Soutput}
+             unpenalised  penalised
+time7 weeks     1.275001 -0.0137593
+time12 weeks    0.653505 -0.3514360
+\end{Soutput}
+\end{Schunk}
+%%
+The penalised log-odds ratios clearly hint at a constant pain profile.
+
+At the end of the day, we are interested in comparing the two treatment
+groups with respect to the patient-specific log-odds ratios, that is, we
+want to know if the pain reduction at the two time points was different
+between the two groups, so we study the contrasts
+%%
+<<MPL-diff, eval = FALSE>>=
+cbind(unpenalised = coef(fA) - coef(fP), 
+      penalised = coef(fAp) - coef(fPp))
+@
+%%
+\begin{Schunk}
+\begin{Sinput}
+R> cbind(unpenalised = coef(fA) - coef(fP), 
++        penalised = coef(fAp) - coef(fPp))
+\end{Sinput}
+\begin{Soutput}
+             unpenalised penalised
+time7 weeks     -6.81497 -1.623354
+time12 weeks    -4.90569 -0.828534
+\end{Soutput}
+\end{Schunk}
+%%
+The effect of penalisation is still clearly visible, as well as the
+dampening of the treatment effect over time which can also be observed from
+Figure~\ref{fig:base}.  It should be noted that the simultaneous comparison
+of both time point to baseline gives different results compare to the
+analysis of the data when we only compare a single time point to baseline,
+because both shift parameters impact the intercept parameters, see also
+Appendix~\ref{app:edge}.
+
+\section{Odds and Ends}
+
+The default link function \Rcmd{link = "logit"} implements the proportional
+odds model.  Alternative link functions give rise to Lehmann alternatives
+(\Rcmd{link = "loglog"}), proportional hazards models (\Rcmd{link =
+"cloglog"}), and latent normal models with parameters comparable to Cohen's
+$d$ (\Rcmd{link = "probit"}).  Independent right-censoring of response
+values can be specified using \code{survival::Surv}.  It is important to
+note that \code{free1way} always performs full maximum likelihood estimation
+of all model parameters, so one must not assume to observe results identical
+to other estimation techniques of the same model (most prominently, to the
+partial likelihood for proportional hazards models in \code{survival::survfit}
+or \code{survival::coxph}).  However, likelihood inference results for the
+unstratified case should be identical to \code{orm} \citep{rms}.  This
+highly tuned \proglang{FORTRAN} implementation served as a blue print for
+many aspects of \code{free1way}.  For large samples with a limited number of
+response categories, the computing times of the two implementations are
+comparable.  For continuous responses and thus many threshold parameters
+$\parm$, \code{free1way} is typically slower by a factor of three or four
+compared to the lightning fast \code{orm}.
+
+\section{Discussion}
+
+The novel \code{free1way} function unifies many classical test procedures
+available for decades in \pkg{stats}, among them \code{wilcox.test},
+\code{kruskal.test}, \code{friedman.test}, \code{mantelhaen.test},
+\code{prop.test}, and \code{mcnemar.test} and adds new members to this
+family, most importantly distribution-free models against Lehmann
+alternatives or Cohen's $d$.  The underlying models, corresponding
+structural assumptions, and parameterisations surface, allowing data
+analysts to perform diagnostic tests justifying (or not) the application of
+such models.  Most importantly, \code{free1way} equips these classical and
+novel models with a proper likelihood and corresponding parameter estimates
+as well as a plethora of permutation- and population-based inference
+procedures.  Power assessment and sample size planning is now directly
+linked to estimation and inference procedures.
+
+%% wilcox.test paired
+%% Why stats? Passing on the flame, not worshiping the ashes.
+%% Lacking: Interval censoring
+
+
+%%
+<<bib, echo = FALSE, results = hide, message = FALSE>>=
+if (file.exists("REFERENCES.bib"))
+    file.remove("REFERENCES.bib")
+pkgs <- c("free1way.docreg", "tram")
+bib <- do.call("c", lapply(pkgs, function(pkg) read.bib(package = pkg)))
+bib <- bib[!duplicated(names(bib))]
+if ("R" %in% names(bib))
+    bib[["R"]] <- NULL
+write.bib(c("rms", "tram", "MASS", "free1way.docreg", "Matrix", "survival"))
+bib["Harrell2015RMS"]$doi <- gsub("_", "\\\\_", bib["Harrell2015RMS"]$doi)
+write.bib(bib, file = "REFERENCES.bib")
+R <- unclass(toBibtex(citation()))
+R[[1]] <- "@Manual{R,"
+cat(R, file = "Rpackages.bib", append = TRUE, sep = "\n")
+@
+%%
+\bibliography{REFERENCES,Rpackages,WMW}
+
+\begin{appendix}
+
+\section{Implementation and Quality Assurance} \label{app:vign}
+
+The \proglang{R} code implementing \code{free1way} is part of the
+\pkg{stats} package.  The add-on package
+\href{https://doi.org/10.32614/CRAN.package.free1way.docreg}{\pkg{free1way.docreg}}
+\citep{free1way.docreg} serves as a vehicle for distributing
+%%
+\begin{itemize}
+%%% direct link not allowed by R CMD check
+\item A \href{https://CRAN.R-project.org/package=free1way.docreg}{literate
+  programming} document linking theory and
+  implementation and explaining all technical details.
+The document is also available as package vignette
+%%
+<<vign, eval = FALSE>>=
+vignette("free1way", package = "free1way.docreg")
+@
+%%
+\item Additional \href{https://cran.r-project.org/web/checks/check_results_free1way.docreg.html}{regression tests}.
+\end{itemize}
+
+\section{Optimisation} \label{app:optim}
+
+The choice of optimisation routines in \code{free1way} is in line with the
+extensive experiments on this issue reported on by \cite{Harrell2024} and by
+corresponding implementation in the \pkg{rms} add-on package \citep{rms}. 
+Two aspects are of prime importance: First, it is not necessary to actively
+perform constraint optimisation, because the log-likelihood
+contributions~(\ref{fm:f1wll}) is only defined iff the intercept parameters
+within each block are ordered.  Otherwise, the log-likelihood contribution
+is \Rcmd{-Inf}. Thus, a parameter configuration is
+inadmissible iff the log-likelihood is not finite and many optimisers can
+handle this setup.
+
+Second, the Fisher information is available in analytical form and the block
+corresponding to the intercept parameters is tri-banded, facilitating very
+efficient storage and parameter updates even when the number of distinct
+outcomes and thus the number intercept terms is very large.
+
+Two optimisation routines are currently in-built: \code{nlminb} and a
+tailored version of Newton-Raphson with step-halving, the latter suggested
+by \cite{Harrell2024}.  The main difference is that \code{nlminb} can only
+handle Fisher information matrices stored in dense form whereas the latter
+(internal) \code{.NewtonRaphson} function leverages the sparsity through
+functionality offered by the \pkg{Matrix} \citep{Matrix} add-on package. 
+For small sample sizes (and penalised estimation), the default is
+\code{nlminb}, for all other problems \code{.NewtonRaphson} is applied. 
+Users can switch between the two by \Rcmd{dooptim = "nlminb"} or
+\Rcmd{dooptim = ".NewtonRaphson"}.
+
+It is also possible to apply third-party optimisers, the only condition
+being that a user-interface compatible with the one sported by \code{nlminb}
+is available.  We illustrate ways to experiment with other optimisers using
+the following problematic model
+%%
+<<Jeffrey-nlminb, warning = FALSE, eval = FALSE>>=
+fPp <- free1way(vas ~ time | id, data = pain, 
+                subset = laser == "Placebo", 
+                MPL_Jeffreys = TRUE, logdet = TRUE)
+@
+%%
+\begin{Schunk}
+\begin{Sinput}
+R> fPp <- free1way(vas ~ time | id, data = pain, 
++                  subset = laser == "Placebo", 
++                  MPL_Jeffreys = TRUE, logdet = TRUE)
+\end{Sinput}
+\end{Schunk}
+%%
+issuing the warning \Rcmd{unsuccessful optimisation in free1way: false convergence
+(8)}.
+
+We can implement the penalised negative log-likelihood
+function~(\ref{fm:f1wpll}) for all model parameters $\theta = (\delta_2,
+\dots, \delta_K, \parm)$ and compare the two penalised log-likelihoods
+%%
+<<Jeffrey-chk, eval = FALSE>>=
+pll <- function(theta) {
+    ret <- fPp$profile(theta, fix = seq_along(theta))
+    ret$value - .5 * c(ret$logdet)
+}
+logLik(fPp)
+-pll(fPp$par)
+@
+%%
+\begin{Schunk}
+\begin{Sinput}
+R> pll <- function(theta) {
++      ret <- fPp$profile(theta, fix = seq_along(theta))
++      ret$value - .5 * c(ret$logdet)
++  }
+R> logLik(fPp)
+\end{Sinput}
+\begin{Soutput}
+[1] -107.716
+\end{Soutput}
+\begin{Sinput}
+R> -pll(fPp$par)
+\end{Sinput}
+\begin{Soutput}
+[1] -107.716
+\end{Soutput}
+\end{Schunk}
+%%
+Using the estimated parameters as starting values, we can refit the model
+using Nelder-Mead
+%%
+<<Jeffrey-optim, eval = FALSE>>=
+op <- optim(fPp$par, fn = pll)
+logLik(fPp)
+-op$value
+coef(fPp)
+op$par[1:2]
+@
+%%
+\begin{Schunk}
+\begin{Sinput}
+R> op <- optim(fPp$par, fn = pll)
+R> logLik(fPp)
+\end{Sinput}
+\begin{Soutput}
+[1] -107.716
+\end{Soutput}
+\begin{Sinput}
+R> -op$value
+\end{Sinput}
+\begin{Soutput}
+[1] -107.511
+\end{Soutput}
+\begin{Sinput}
+R> coef(fPp)
+\end{Sinput}
+\begin{Soutput}
+ time7 weeks time12 weeks 
+  -0.0279659   -0.4194244 
+\end{Soutput}
+\begin{Sinput}
+R> op$par[1:2]
+\end{Sinput}
+\begin{Soutput}
+[1] -0.0234542 -0.4213366
+\end{Soutput}
+\end{Schunk}
+%%
+and obtain a slightly larger value of the penalised log-likelihood but the
+log-odds ratios are quite similar.  We can also write a wrapper around
+\code{optim} and specify the name of this function as argument
+\Rcmd{dooptim}, together with a named list of control arguments (which must
+feature \Rcmd{trace} and \Rcmd{iter.max})
+%%
+<<Jeffrey-dooptim, warning = FALSE, eval = FALSE>>=
+optNM <- function(start, objective, control = list(trace = FALSE), ...) {
+    ctrl <- list(trace = control$trace)
+    ret <- optim(start, fn = objective, control = ctrl)
+    ret$objective <- ret$value
+    ret
+}
+fPpNM <- free1way(vas ~ time | id, data = pain, dooptim = "optNM",
+    subset = laser == "Placebo", 
+    control = list(optNM = list(trace = FALSE, iter.max = 100)),
+    MPL_Jeffreys = TRUE, logdet = TRUE)
+logLik(fPp)
+logLik(fPpNM)
+@
+%%
+\begin{Schunk}
+\begin{Sinput}
+R> optNM <- function(start, objective, control = list(trace = FALSE), ...) {
++      ctrl <- list(trace = control$trace)
++      ret <- optim(start, fn = objective, control = ctrl)
++      ret$objective <- ret$value
++      ret
++  }
+R> fPpNM <- free1way(vas ~ time | id, data = pain, dooptim = "optNM",
++      subset = laser == "Placebo", 
++      control = list(optNM = list(trace = FALSE, iter.max = 100)),
++      MPL_Jeffreys = TRUE, logdet = TRUE)
+R> logLik(fPp)
+\end{Sinput}
+\begin{Soutput}
+[1] -107.716
+\end{Soutput}
+\begin{Sinput}
+R> logLik(fPpNM)
+\end{Sinput}
+\begin{Soutput}
+[1] -124.206
+\end{Soutput}
+\end{Schunk}
+%%
+This exercise fails with a reportedly unsuccessful optimisation, and it
+seems Nelder-Mead was not able reproduce its better result when using the
+default starting values.
+
+\section{Penalisation} \label{app:Jeffrey}
+
+The sum $\ell$ of the log-likelihood contributions~(\ref{fm:f1wll}) is
+penalised by a factor $\nicefrac{1}{2} A$ of the log-determinant of the
+Fisher information
+%%
+\begin{eqnarray} \label{fm:f1wpll}
+\ell(\delta_2, \dots, \delta_K, \parm) + \frac{1}{2} A \log(\det(\FI(\delta_2, \dots, \delta_K, \parm))),
+\end{eqnarray}
+%%
+where the argument \Rcmd{MPL\_Jeffreys = }$A$ uses $A =$\Rcmd{FALSE} by default.
+
+For binary outcomes and two time points, the penalised log-odds ratio is
+identical to the one obtained by Firth's method in a binary logistic
+regression model and close to the Mantel-Haenszel estimate
+%%
+<<binJeffrey, warning = FALSE, eval = FALSE>>=
+library("brglm2")
+xt <- xtabs(~ vasB + time + id, data = pain, 
+            subset = laser == "Placebo" & time != "7 weeks",
+            drop.unused.levels = TRUE)
+dxt <- as.data.frame(xt)
+Firth <- glm(vasB ~ 0 + id + time, 
+             data = dxt, weights = dxt$Freq, 
+             family = binomial(link = "logit"), 
+             method = "brglmFit", type = "MPL_Jeffreys")
+exp(coef(Firth)["time12 weeks"])
+exp(coef(fJ <- free1way(xt, MPL_Jeffreys = TRUE)))
+mantelhaen.test(xt)$estimate
+### biased ML, the default
+exp(coef(free1way(xt, MPL_Jeffreys = FALSE)))
+@
+%%
+\begin{Schunk}
+\begin{Sinput}
+R> library("brglm2")
+R> xt <- xtabs(~ vasB + time + id, data = pain, 
++              subset = laser == "Placebo" & time != "7 weeks",
++              drop.unused.levels = TRUE)
+R> dxt <- as.data.frame(xt)
+R> Firth <- glm(vasB ~ 0 + id + time, 
++               data = dxt, weights = dxt$Freq, 
++               family = binomial(link = "logit"), 
++               method = "brglmFit", type = "MPL_Jeffreys")
+R> exp(coef(Firth)["time12 weeks"])
+\end{Sinput}
+\begin{Soutput}
+time12 weeks 
+     1.12907 
+\end{Soutput}
+\begin{Sinput}
+R> exp(coef(fJ <- free1way(xt, MPL_Jeffreys = TRUE)))
+\end{Sinput}
+\begin{Soutput}
+time12 weeks 
+     1.12907 
+\end{Soutput}
+\begin{Sinput}
+R> mantelhaen.test(xt)$estimate
+\end{Sinput}
+\begin{Soutput}
+common odds ratio 
+          1.16667 
+\end{Soutput}
+\begin{Sinput}
+R> ### biased ML, the default
+R> exp(coef(free1way(xt, MPL_Jeffreys = FALSE)))
+\end{Sinput}
+\begin{Soutput}
+time12 weeks 
+     1.36111 
+\end{Soutput}
+\end{Schunk}
+%%
+It is important to note that for null hypothesis testing only, patients or
+blocks with the same outcome value at the two time points do not play a role
+and are removed (as noted for McNemar's test).  In contrast, for estimating
+the treatment effect, these observations contribute information and
+therefore have to be retained.  In the analysis above, not only the log-odds
+ratio but also all patient-specific intercepts are identical (up to their
+signs, the treatment effect comes last for \code{glm} and first for
+\code{free1way})
+%%
+<<Firth, eval = FALSE>>=
+max(abs(coef(Firth)[-length(coef(Firth))] + fJ$par[-1L]))
+@
+%%
+\begin{Schunk}
+\begin{Sinput}
+R> max(abs(coef(Firth)[-length(coef(Firth))] + fJ$par[-1L]))
+\end{Sinput}
+\begin{Soutput}
+[1] 1.9237e-06
+\end{Soutput}
+\end{Schunk}
+%%
+
+Computing penalised estimators is slow because the penalised log-likelihood
+is currently implemented but the corresponding score function is still
+missing.
+
+\section{Peculiarities} \label{app:edge}
+
+In the framework implemented by \code{free1way}, permutation score tests are
+always available and valid, because the model is only fitted under the null
+hypothesis and the intercept parameters can always be estimated.  Estimating
+treatment effects and intercept parameters simultaneously may however fail
+because of a very flat log-likelihood as it is the case when there is no
+overlap of the outcomes between the two groups.
+
+For example, with observations $1, \dots, N$ in one group and $N + 1, \dots,
+2 N$ in the other group, we can perform an exact Wilcoxon test both using
+\code{wilcox.test}
+%%
+<<small-wt>>=
+N <- 5
+d <- data.frame(groups = gl(2, N))
+d$y <- seq_len(2 * N)
+wilcox.test(y ~ groups, data = d, exact = TRUE)$p.value
+@
+%%
+and \code{free1way}
+%%
+<<small-f1w, warning = FALSE, message = FALSE>>=
+f <- free1way(y ~ groups, data = d, exact = TRUE)
+summary(f, test = "Permutation")$p.value
+@
+%%
+The call to \code{free1way} produces many warnings about optimisation
+problems, because the log-likelihood is flat.  This is also visible from
+looking at the Hessian of the profile log-likelihood
+%%
+<<small-f1w-he>>=
+f$hessian
+@
+%%
+and we can vary the log-odds ratio $\delta$ while refitting the intercept
+parameters by directly accessing the profile log-likelihood
+%%
+<<small-f1w-ll, warning = FALSE, message = FALSE>>=
+coef(f)
+theta <- f$par[-1L]
+delta <- 20:60
+logLik(f)
+range(sapply(delta, function(d)
+    -f$profile(c(d, theta), fix = 1L)$value))
+@
+%%
+
+It might also come as a surprise that a joint analysis of all treatment
+groups produces slightly different results than an analysis contrasting
+subsets thereof.  The reason is that the intercept parameters apply to all
+groups and thus removing or adding groups has an impact on both the
+intercept and the treatment effect parameters.  In this small example,
+differences in means computed by \code{lm} are not affected by the number of
+groups in the model but log-odds ratios differ slightly
+%%
+<<addgroups>>=
+d <- rfree1way(25, delta = c(.5, .75))
+
+### identical
+cbind(coef(lm(y ~ groups, data = d))[-1L],
+      c(coef(lm(y ~ groups, data = d, subset = groups != "C"))[-1L],
+        coef(lm(y ~ groups, data = d, subset = groups != "B"))[-1L]))
+
+### not identical
+cbind(coef(free1way(y ~ groups, data = d)),
+      c(coef(free1way(y ~ groups, data = d, subset = groups != "C")),
+        coef(free1way(y ~ groups, data = d, subset = groups != "B"))))
+@
+%%
+
+\section{Computational Environment} \label{app:ce}
+
+%%
+<<sessionInfo, echo = FALSE, results = tex>>=
+toLatex(sessionInfo())
+@
+%%
+
+\end{appendix}
+
+\end{document}

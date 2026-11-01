@@ -1,5 +1,6 @@
 
-library("free1way.docreg")
+library("free1way.docreg", warn.conflicts = FALSE)
+set.seed(290875)
 
 ### bugs fixed in 4.6.1, so test with R 4.6.1 or later only
 if (compareVersion(paste0(version$major, ".", version$minor), "4.6.1") >= 0)
@@ -20,4 +21,16 @@ stopifnot(isTRUE(max(abs(xt - 10 * matrix(rep(1:3, 2), byrow = TRUE, nrow = 2) *
 #  'breaks' are not unique
 power.free1way.test(n = 10, prob = matrix(c(0, 0, 1, 2, 3), ncol = 1),
                     delta = 1)
+}
+
+### bugs fixed in 4.6.2, so test with R 4.6.2 or later only
+if (compareVersion(paste0(version$major, ".", version$minor), "4.6.2") >= 0)
+{
+### Overlap coefficients are monotone increasing for negative arguments and
+### decreasing for positive ones.  Confidence intervals for shift terms
+### including zero should include 1 for the overlap coefficient
+d <- rfree1way(10, delta = c(0, -2, 2))
+fw <- free1way(y ~ groups, data = d)
+CI <- confint(fw, test = "Wald", what = "OVL")
+stopifnot(all(CI[,1] < CI[,2]))
 }

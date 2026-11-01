@@ -1,7 +1,7 @@
 \documentclass[a4paper]{report}
 
 %\VignetteIndexEntry{Stratified K-sample Inference}
-%\VignetteDepends{multcomp,survival,Hmisc,coin,rms,latticeExtra,daewr}
+%\VignetteDepends{multcomp,survival,Hmisc,coin,rms,latticeExtra,daewr,brglm2}
 %\VignetteKeywords{semiparametric model,conditional inference}}
 %\VignettePackage{free1way.docreg}
 
@@ -121,7 +121,7 @@ urlcolor={linkcolor}%
 
 
 <<citation, echo = FALSE>>=
-yr <- format(dt <- as.Date(packageDescription("free1way.docreg")$Date), "%Y")
+yr <- format(dt <- as.Date(packageDescription("free1way.docreg")$Packaged), "%Y")
 vs <- packageDescription("free1way.docreg")$Version
 title <- "Semiparametrically Efficient Population and Permutation Inference in 
        Distribution-free Stratified $K$-sample Oneway Layouts"
@@ -271,6 +271,17 @@ the permutation and population model. Proportional odds models ($m_\text{PO}$)
 are explained in-depths by \cite{Harrell2015RMS}, although the models are
 presented in terms of survivor, not distribution, functions. 
 
+We provide short-cuts for evaluating the link function $F^{-1}$, its inverse
+$F$, its density $f$ and the derivative $f^\prime$:
+@d short-cuts for link functions
+@{
+### short-cuts for link functions
+F <- function(q, ...) .p(link, q = q, ...)
+Q <- function(p, ...) .q(link, p = p, ...)
+f <- function(q, ...) .d(link, x = q, ...)
+fp <- function(q) .dd(link, x = q)
+@}
+
 \paragraph{Hypothesis}
 
 We are interested in inference for $\delta_2, \dots, \delta_K$, in terms of
@@ -365,6 +376,8 @@ options(digits = 5)
 .table2list <- function(x) 
 {
 
+    MPL_Jeffreys <- FALSE
+
     @<table2list body@>
 
     ret <- list(xlist = xlist)
@@ -376,11 +389,13 @@ options(digits = 5)
 @<negative logLik@>
 @<negative score@>
 @<negative score residuals@>
+@<negative scale score residuals@>
 @<Hessian@>
 @<stratified negative logLik@>
 @<stratified negative score@>
 @<stratified Hessian@>
 @<stratified negative score residual@>
+@<stratified negative scale score residual@>
 @<ML estimation@>
 @<Strasser Weber@>
 @<resampling@>
@@ -400,7 +415,32 @@ From $\thetavec$, we first extract the shift parameters $\delta_k, k = 2,
 \dots, K$ and
 then the intercept parameters $\vartheta_{c,1}, c = 1, \dots, C - 1$ and evaluate the probabilities
 \code{prb} $ = \Prob(y_{c - 1} < Y \le y_c \mid \rT = k, \rS = 1)$ for all
-groups:
+groups. 
+
+Before we begin, let's contemplate a little about the log-likelihood
+contributions. For probabilities $a > b$, we need to compute $\log(a - b)$.
+The problem is that the difference might be close to zero or, because of
+inadmissible parameter configurations, $a < b$. In the former case, we still
+need a precise assessment of $\log(a - b)$ and in the latter case, we need
+to return an infinite value, signalling back to the optimisation routine
+that we went off rails.
+
+For scalars $a > b$, we can compute $\log(a - b)$ using the log-sum-exp
+trick (adopted to differences), that is with $\alpha = \log(a)$ and $\beta = \log(b)$
+\begin{eqnarray*}
+\log(a - b) & = & \log\left(\exp(\alpha) - \exp(\beta)\right) \\
+& = & \alpha + \log\left(\exp(-\alpha)(\exp(\alpha) - \exp(\beta))\right) \\
+& = & \alpha + \log\left(\exp(\alpha - \alpha) - \exp(\beta - \alpha)\right) \\
+& = & \alpha + \log\left(1 - \exp(\beta - \alpha)\right).
+\end{eqnarray*}
+Because $\beta - \alpha < 0$, the second term in this expression can be computed in a
+numerically stable way by \code{pexp(,log.p = TRUE)} (with argument $\alpha
+- \beta$).
+
+Now, we start with log-probabilities and use the log-sum-exp trick
+after making sure that inadmissible parameter configurations correspond to a
+zero difference for log-probabilities and, therefore, an infinite value will
+be returned.
 
 @d parm to prob
 @{
@@ -410,12 +450,16 @@ intercepts <- c(-Inf, parm[- bidx], Inf)
 tmb <- intercepts - matrix(delta, nrow = length(intercepts),  
                                   ncol = ncol(x),
                                   byrow = TRUE)
-Ftmb <- F(tmb)
+
+Ftmb <- exp(logFtmb <- F(tmb, log.p = TRUE))
+### log-sum-exp trick and log(1 - exp()) via pexp
 if (rightcensored) {
-    prb <- 1 - Ftmb[- nrow(Ftmb), , drop = FALSE]
+    logprb <- log1p(- Ftmb[- nrow(Ftmb), , drop = FALSE])
 } else {
-    prb <- Ftmb[- 1L, , drop = FALSE] - 
-           Ftmb[- nrow(Ftmb), , drop = FALSE]
+    logprb <- logFtmb[- 1L, , drop = FALSE] +
+              pexp(pmax(0, logFtmb[- 1L, , drop = FALSE] - 
+                           logFtmb[- nrow(Ftmb), , drop = FALSE]), 
+                   log.p = TRUE)
 } 
 @}
 
@@ -424,17 +468,16 @@ If the table \code{x} represents right-censored observations, we compute
 
 With default null values $\mu_k = 0, k = 2, \dots, K$, we define the
 negative log-likelihood function as the weighted (by number of observations) sum of
-the log-probabilities
+the log-probabilities. The nice thing here is that we don't need to handle
+near zero probabilities explicitly, because we computed \code{logprb} in a
+stable way.
 
 @d negative logLik
 @{
 .nll <- function(parm, x, mu = 0, rightcensored = FALSE) 
 {
-
     @<parm to prob@>
-    if (any(prb < .Machine$double.eps^10)) 
-        return(Inf)
-    return(- sum(x * log(prb)))
+    return(- sum(x * logprb))
 }
 @}
 
@@ -457,10 +500,10 @@ We begin computing the ratio of $f(\vartheta_{c,1} -
 
 @d density prob ratio
 @{
-ftmb <- f(tmb)
-zu <- x * ftmb[- 1, , drop = FALSE] / prb
+ftmb <- f(tmb, log = TRUE)
+zu <- x * exp(ftmb[- 1, , drop = FALSE] - logprb)
 if (rightcensored) zu[] <- 0 ### derivative of a constant
-zl <- x * ftmb[- nrow(ftmb), , drop = FALSE] / prb
+zl <- x * exp(ftmb[- nrow(ftmb), , drop = FALSE] - logprb)
 @}
 
 and then compute the negative score function:
@@ -505,15 +548,37 @@ zero:
 }
 @}
 
+For the sake of completeness, we add negative scale score residuals defined
+by the derivative of the
+negative log-likelihood with respect to an scale term constrained to one:
+
+@d negative scale score residuals
+@{
+.nssr <- function(parm, x, mu = 0, rightcensored = FALSE) 
+{
+
+    @<parm to prob@>
+
+    @<density prob ratio@>
+
+    ret <- .rowSums(zl * c(0, parm[-bidx]) - zu * c(parm[-bidx], 0), 
+                    m = nrow(zl), n = ncol(zl)) / 
+           .rowSums(x, m = nrow(x), n = ncol(x))
+    ret[!is.finite(ret)] <- 0
+    return(- ret)
+}
+@}
+
 We also need access to the observed Fisher information of the shift
 parameters. We proceed by implementing the Hessian for the intercept
 ($\vartheta_\cdot$) and shift ($\delta_\cdot$) parameters, as given in Formula~(4) of
-\cite{HothornMoestBuehlmann2017} first. This partitioned matrix
+\cite{HothornMoestBuehlmann2017} first. This partitioned matrix (for the
+parameter vector of one block starting with the shift parameters)
 \begin{eqnarray*}
-\mH(\vartheta_1, \dots, \vartheta_{C - 1}, \delta_2, \dots, \delta_K) = 
+\mH(\delta_2, \dots, \delta_K, \vartheta_1, \dots, \vartheta_{C - 1}) = 
 \left(\begin{array}{ll}
-\mA & \X \\
-\X^\top & \Z
+\Z & \X \\
+\X^\top & \mA
 \end{array} \right)
 \end{eqnarray*}
 consists of a symmetric tridiagonal $\mA \sim (C-1,C-1)$, a diagonal $\Z \sim (K - 1, K -
@@ -528,6 +593,10 @@ not being present under right-censoring:
 
 @d Hessian prep
 @{
+## ratios are computed on the log-scale in .nsr()
+## however, fp(tmb) can be negative here so we refrain from
+## this exercise here
+prb <- exp(logprb)
 ftmb <- f(tmb)
 fptmb <- fp(tmb)
 
@@ -713,13 +782,36 @@ xlist <- xrclist <- vector(mode = "list", length = B)
 
 for (b in seq_len(B)) {
     xb <- matrix(x[,,b, drop = TRUE], ncol = K)
-    xw <- rowSums(abs(xb)) > 0
-    if (sum(xw) > 1L) {
+    ### remove undefined shift parameters
+    ### determine rows w/o observation 
+    xw <- rowSums(abs(xb)) > 0L
+    ### for penalised estimation, we do NOT want
+    ### to remove blocks with constant outcomes
+    if (MPL_Jeffreys > 0L && ### penalised likelihoods 
+        B >  1L &&           ### in the presence of blocks
+        is.null(xrc)         ### absence of right-censoring
+       ) 
+    {
+        ### keep one additional row w/o observation
+        ### such that the block will not be removed
+        ### NB: make sure starting values for intercepts
+        ###     are still monotone increasing by assigning
+        ###     not zero but a small number (.1) below
+        if (sum(xw) == 1L && length(xw) > 1L)
+            xw[which(!xw)[1L]] <- TRUE
+    }
+    if (sum(xw) > 1L && 	### at least two different outcome values
+        sum(abs(xb)) > 1L) 	### at least two observations per block
+    {
         ### do not remove last parameter if there are corresponding
         ### right-censored observations
         wm <- which(xw)[sum(xw)]
-        if (!is.null(xrc) && any(xrc[wm:dx[1],,b,drop = TRUE] > 0))
-            xw[length(xw)] <- TRUE
+        if (!is.null(xrc) && any(xrc[wm:dx[1],,b,drop = TRUE] > 0)) {
+            ### determine last right-censoring time in this block
+            wrc <- rowSums(abs(xrc[,,b,drop = TRUE])) > 0
+            lastrc <- which(wrc)[sum(wrc)]
+            xw[lastrc] <- TRUE
+        }
         xlist[[b]] <- xb[xw,,drop = FALSE]
         Cidx <- rep.int(1L, times = C)
         Cidx[xw] <- Cidx[xw] + seq_len(sum(xw))
@@ -858,6 +950,27 @@ row of zeros in the table: \label{lab:snsr}
 }
 @}
 
+and repeat the same exercise for scale residuals
+
+@d stratified negative scale score residual
+@{
+.snssr <- function(parm, x, mu = 0, rightcensored = FALSE) 
+{
+
+    @<stratum prep@>
+
+    ret <- c()
+    for (b in seq_len(B)) {
+        idx <- attr(x[[b]], "idx")
+        ### idx == 1L means zero residual, see definition of idx
+        sr <- c(0, .nssr(c(delta, intercepts[[b]]), x[[b]], mu = mu,
+                         rightcensored = rightcensored))
+        ret <- c(ret, sr[idx])
+    }
+    return(ret)
+}
+@}
+
 <<glm-stratum>>=
 (x <- as.table(array(c(10, 5, 7, 11, 8, 9,
                         9, 4, 8, 15, 5, 4), dim = c(2, 3, 2))))
@@ -949,6 +1062,7 @@ and the computation of the Hessian for the shift parameters using
             H$A <- H$A + Hrc$A
             H$Z <- H$Z + Hrc$Z
         }
+        ### needs Matrix::solve
         sAH <- tryCatch(Matrix::solve(H$A, H$X), error = function(e) NULL)
         if (is.null(sAH))
             stop(gettextf("error computing the Hessian in %s",
@@ -1142,14 +1256,18 @@ loglog <- function()
                 if (log.p) {
                     if (lower.tail)
                         return(-exp(-q))
-                    return(log1p(-exp(-exp(-q))))
+                    return(pexp(exp(-q), log.p = TRUE))
                 }
                 if (lower.tail)
                     return(exp(-exp(-q)))
                 -expm1(-exp(-q))
             },
-            dlinkinv = function(x) 
-                ifelse(is.finite(x), exp(- x - exp(-x)), 0.0),
+            dlinkinv = function(x, log = FALSE) {
+                ret <- - x - exp(-x)
+                if (log)
+                    return(ifelse(is.finite(x), ret, -Inf))
+                ifelse(is.finite(x), exp(ret), 0.0)
+            },
             ddlinkinv = function(x) {
                ex <- exp(-x)
                ifelse(is.finite(x), exp(-ex - x) * (ex - 1.0), 0.0)
@@ -1202,8 +1320,12 @@ cloglog <- function()
                     return(-expm1(-exp(q)))
                 return(ret)
             },
-            dlinkinv = function(x) 
-                ifelse(is.finite(x), exp(x - exp(x)), 0.0),
+            dlinkinv = function(x, log = FALSE) {
+                ret <- x - exp(x)
+                if (log)
+                    return(ifelse(is.finite(x), ret, -Inf))
+                ifelse(is.finite(x), exp(ret), 0.0)
+            },
             ddlinkinv = function(x) {
                 ex <- exp(x)
                 ifelse(is.finite(x), (ex - ex^2) / exp(ex), 0.0)
@@ -1264,7 +1386,14 @@ matrix. The following code was adopted from his \pkg{rms} package, function
 gradthe <- gradient(theta)     # Compute the gradient vector
 hessthe <- hessian(theta)      # Compute the Hessian matrix
 
-delta <- Matrix::solve(hessthe, gradthe, tol = control$tolsolve)
+delta <- tryCatch(Matrix::solve(hessthe, gradthe, 
+                                tol = control$tolsolve),
+                  error = function(e) NULL)
+if (is.null(delta)) {
+    msg <- "computing Newton update failed in .NewtonRaphson"
+    return(list(par = theta, objective = objthe, convergence = 1, 
+                message = msg)) 
+}
 
 if (control$trace)
     cat(iter, ': ', theta, "\n", sep = "")
@@ -1289,7 +1418,7 @@ if (!is.finite(objnew_the) || (objnew_the > objthe + 1e-6)) {
         cat("Step size reduced to", step_size, "\n")
 
     if (step_size <= control$minstepsize) {
-        msg <- paste("Step size ", step_size, 
+        msg <- paste("step size ", step_size, 
                      " has reduced below minstepsize")
         return(list(par = theta, objective = objthe, convergence = 1, 
                     message = msg)) 
@@ -1330,7 +1459,7 @@ if ((objthe <= oldobj + 1e-6 && (oldobj - objthe < control$objtol)) &&
     oldobj <- Inf
     objthe <- objective(theta)
     if (!is.finite(objthe)) {
-        msg <- "Infeasible starting values"
+        msg <- "infeasible starting values"
         return(list(par = theta, objective = objthe, convergence = 1, 
                     message = msg)) 
     }
@@ -1345,14 +1474,14 @@ if ((objthe <= oldobj + 1e-6 && (oldobj - objthe < control$objtol)) &&
         @<Newton update@>
 
         # Step-halving loop
-        while (TRUE) {
+        repeat {
             @<Newton step halving@>
         }
 
         @<Newton convergence@> 
     }
 
-    msg <- paste("Reached", control$iter.max, "iterations without convergence")
+    msg <- paste("reached", control$iter.max, "iterations without convergence")
     return(list(par = theta, objective = objthe, convergence = 1, message = msg)) 
 }
 @}
@@ -1385,15 +1514,16 @@ all.equal(unname(cf$par), unname(cf2))
 \chapter{ML Estimation}
 \label{ch:ML}
 
-We use two internal \pkg{stats} functions, define here
+We use one internal \pkg{stats} function, which is fine in \pkg{stats} but
+not when running the code as part of the \pkg{free1way.docreg} package, so
+we include it here
 @o utils.R -cp
 @{
 ### gives warnings but no diffs
-C_dpermdist2 <- stats:::C_dpermdist2
 assert_NULL_or_prob <- stats:::assert_NULL_or_prob
 @}
 
-The file \file{free1way.R} goes into \file{src/library/stats/R}, so add
+The file \file{free1way.R} goes into \file{src/library/stats/R}, so we add
 copyright statement here as well (such that we can simply copy the file in
 case of updates).
 @o free1way.R -cp
@@ -1425,6 +1555,7 @@ case of updates).
 @<free1way print@>
 @<free1way summary@>
 @<free1way confint@>
+@<MPLfree1way methods@>
 @<free1way formula@>
 @<free1way numeric@>
 @<free1way factor@>
@@ -1456,7 +1587,7 @@ for (b in seq_len(length(xlist))) {
     bC <- nrow(xlist[[b]]) - 1L
     lwr <- c(lwr, -Inf, rep.int(0, times = bC - 1L))
     if (NS) {
-        ecdf0 <- cumsum(rowSums(xlist[[b]]))
+        ecdf0 <- cumsum(pmax(.1, rowSums(xlist[[b]])))
         ### ensure that 0 < ecdf0 < 1 such that quantiles exist
         ecdf0 <- pmax(1, ecdf0[-length(ecdf0)]) / (max(ecdf0) + 1)
         Qecdf <- Q(ecdf0)
@@ -1491,24 +1622,10 @@ while(maxit < 10001) {
    }
 }
 
-if (isTRUE(MPL_Jeffreys)) {
-    @<Jeffreys penalisation@>
-} else {
-    if (ret$convergence > 0) {
-        if (is.na(MPL_Jeffreys)) { ### only after failure
-            warning(gettextf("Jeffreys penalisation was applied in %s because initial optimisation failed with:",
-                             "free1way"),
-                    "\n  ", ret$message, domain = NA)
-            MPL_Jeffreys <- TRUE
-            @<Jeffreys penalisation@>
-        }
-   }
-}
 if (ret$convergence > 0)
     warning(gettextf("unsuccessful optimisation in %s", "free1way"),
             ": ", ret$message, domain = NA)
 
-ret$MPL_Jeffreys <- MPL_Jeffreys
 ret$value <- ret$objective
 ret$objective <- NULL
 @}
@@ -1588,6 +1705,8 @@ and define the profile log-likelihood based on these functions
 
     @<do optim@>
 
+    ret$MPL_Jeffreys <- MPL_Jeffreys
+
     p <- numeric(length(start))
     p[fix] <- delta
     p[-fix] <- ret$par
@@ -1597,64 +1716,143 @@ and define the profile log-likelihood based on these functions
 @}
 
 Chapter~\ref{ch:penal} introduces a bias correction \citep{Firth1993},
-essentially by adding a penalty (Jeffreys prior) term to the log-likelihood. The
-\code{MPL_Jeffreys} argument triggers this bias correction via
+essentially by adding a penalty (Jeffreys prior) term to the log-likelihood.
+We start computing the log-determinant of the Hessian. We write 
+\begin{eqnarray*}
+\mH(\delta_2, \dots, \delta_K, \vartheta_1, \dots, \vartheta_{C - 1}) = 
+\left(\begin{array}{ll}
+\Z & \X \\
+\X^\top & \mA
+\end{array} \right)
+\end{eqnarray*}
+and compute its determinant via 
+\begin{eqnarray*}
+\det(\mH) = \det(\Z - \X \mA^{-1} \X^\top) \det(\mA).
+\end{eqnarray*}
+Because $\mA$ is tridiagnonal, the quadratic form can be computed relatively
+fast. The dimension of $\Z - \X \mA^{-1} \X^\top$ is $(K - 1) \times (K -
+1)$ and thus the determinant is also relatively simple to compute. For the
+determinant of $\mA$, we partition $\mA$ as
+\begin{eqnarray*}
+\mA^{(k)} = 
+\left(\begin{array}{ll}
+\mA^{(k - 1)} & \mA_{k,1:k} \\
+\mA_{1:k,k} & \mA_{k,k}
+\end{array} \right)
+\end{eqnarray*}
+for each $k = 2$ to the number of rows of $\mA$. Here,
+$\mA_{1:k,k} = (0, \dots, 0, \mA_{k-1,k})$. The determinant of the
+tridiagonal matrix $\mA$ is computed via its generalized continuant
+\footnote{\url{https://en.wikipedia.org/wiki/Continuant_(mathematics)}}
+\begin{eqnarray*}
+\det\left(\mA^{(k-1)}\right)\det\left(\mA_{k,k} - 
+  \mA_{k-1,k}^2 (\mA^{(k - 1)}_{k-1,k-1})^{-1}\right)
+\end{eqnarray*}
+which simplifies\footnote{\url{https://math.stackexchange.com/questions/266998/how-to-compute-the-determinant-of-a-tridiagonal-toeplitz-matrix}}
+to
+\begin{eqnarray*}
+\det\left(\mA^{(k)}\right) = \mA_{k,k} \det\left(\mA^{(k-1)}\right) - \mA_{k-1,k}^2
+  \det\left(\mA^{(k-2)}\right).
+\end{eqnarray*}
+We certainly want to compute this on the log-scale, so
+\begin{eqnarray*}
+\log\left(\det\left(\mA^{(k)}\right)\right) = \log\left(\mA_{k,k}
+  \det\left(\mA^{(k-1)}\right) - \mA_{k-1,k}^2
+  \det\left(\mA^{(k-2)}\right)\right).
+\end{eqnarray*}
+
+It would be possible to speed this up a little by iterating over the block
+diagonal matrix $\mA$ in case of blocks, however, the code below also works
+well with some off-diagonal elements being zero:
+
+@d logdet
+@{
+ld <- function(H) {
+    bidx <- seq_len(K - 1)
+    Z <- as.matrix(H[bidx, bidx, drop = FALSE])
+    X <- as.matrix(H[-bidx, bidx, drop = FALSE])
+    A <- H[-bidx,-bidx, drop = FALSE]
+   
+    ### needs Matrix::solve
+    sAX <- tryCatch(Matrix::solve(A, X), error = function(e) NULL)
+    if (is.null(sAX))
+        stop(gettextf("error computing the Hessian determinant in %s",
+                      "free1way"),
+             domain = NA)
+
+    ret <- determinant(Z - crossprod(X, as.matrix(sAX)), logarithm = TRUE)$modulus
+
+    dm1 <- log(A[1,1])
+    dm2 <- 0
+    for (i in seq_len(nrow(A))[-1L]) {
+        loga <- log(A[i, i]) + dm1
+        logb <- (2 * log(abs(A[i-1, i])) + dm2)
+        dm2 <- dm1
+        dm1 <- loga + pexp(loga - logb, log.p = TRUE)
+    }
+    ret <- ret + dm1
+    ret
+}
+@}
+The code uses the log-sum-exp trick explained at the beginning of Chapter~\ref{ch:est}.
+
+The \code{MPL_Jeffreys} argument triggers this bias correction via
 penalisation with Jeffreys prior to by applied
-when \code{TRUE}, not to be applied when \code{FALSE}, and to applied in
-case the unpenalised ML estimation resulted in a convergance issue
-(\code{NA}). This part is still experimental and needs more testing. It also
+when \code{TRUE} (with shrinkage parameter $0.5$ or with $\code{.5 *
+MPL_Jeffreys}$ of \code{MPL_Jeffreys} is numeric) or not to be applied when
+\code{FALSE}. To be more precise, with $\thetavec$ denoting all parameters of
+the model and $\ell(\thetavec)$ the corresponding log-likelihood with Fisher
+information $\mH(\thetavec)$, the penalised log-likelihood is
+\begin{eqnarray*}
+\ell(\thetavec) + \frac{1}{2}\det(\mH(\thetavec))
+\end{eqnarray*}
+\citep[Section 3.1. in][]{Firth1993}
+and thus the negative log-likelihood features $-
+\frac{1}{2}\det(\mH(\thetavec))$ as penality term.
+Maximum penalised likelihood estimation in \code{free1way} 
+is still experimental and needs more testing. It also
 seems unclear if and how the Fisher information needs additional correction
 and it is certainly unclear if one can proceed with permutation testing
 after correcting the bias.
 
-@d Jeffreys penalisation
-@{
-.pll_Jeffreys <- function(cf, start) 
-{
-    fix <- seq_along(cf)
-    start[fix] <- cf
-    ### compute profile likelihood w/o warnings
-    ret <- suppressWarnings(.profile(start, fix = fix))
-    Hfull <- he(ret$par)
-    Hfix <- as.matrix(solve(solve(Hfull)[fix, fix]))
-    return(ret$value - 
-           .5 * determinant(Hfix, logarithm = TRUE)$modulus)
-}
-if (K == 2) {
-    MLcf <- ret$par[seq_len(K - 1)]
-    Fret <- optim(MLcf, fn = .pll_Jeffreys, start = ret$par,
-                  method = "Brent", lower = MLcf - 5, 
-                  upper = MLcf + 5)
-} else {
-    ### Nelder-Mead
-    Fret <- optim(ret$par[seq_len(K - 1)], fn = .pll_Jeffreys, 
-                  start = ret$par)
-}
-if (Fret$convergence == 0) {
-    start <- ret$par
-    start[seq_len(K - 1)] <- Fret$par
-    ret <- .profile(start, fix = seq_len(K - 1))
-    ret$objective <- ret$value
-}
-@}
-
-The heart of the function is a call to \code{nlminb}, trying to obtain
+With the optimisation problem now properly defined, we can proceed trying to
+solve it. The heart of the optimisation chunk is a call 
+to \code{.NewtonRaphson} or \code{nlminb}, trying to obtain
 parameter estimates of $\thetavec$ by minimising the negative
 log-likelihood. We allow some (or all) parameters to be fixed at some
-constants, and provide a profile version of the likelihood:
+constants, and provide a profile version of the likelihood. For the
+penalised version, we only proceed when \code{nlminb} was specified as an
+optimiser, because it also works without gradients and Hessians (maybe we
+can provide these later). We also handle inadmissible parameter
+configurations (non-finite log-likelihood) in the objective, as we optimise
+without gradients, hessians, or constraints at the moment.
 
 @d optim
 @{
 if (!length(fix)) {
-    opargs <- list(start = start, 
-                   objective = fn, 
-                   gradient = gr,
-                   hessian = he)
+    if ((MPL_Jeffreys > 0L)) {
+        opargs <- list(start = start, 
+                       ### note: negative log-likelihood!
+                       objective = function(par) {
+                           ret <- fn(par) 
+                           if (!is.finite(ret)) return(Inf)
+                           return(ret - .5 * MPL_Jeffreys * ld(he(par)))
+                       },
+                       gradient = NULL,
+                       hessian = NULL)
+    } else {
+        opargs <- list(start = start, 
+                       objective = fn, 
+                       gradient = gr,
+                       hessian = he)
+    }
     opargs$control <- control[[1L]]
     @<do optim@>
+    ret$MPL_Jeffreys <- MPL_Jeffreys
 } else if (length(fix) == length(start)) {
     ret <- list(par = start, 
-                value = fn(start))
+                value = fn(start),
+                MPL_Jeffreys = FALSE)
 } else {
     ret <- .profile(start, fix = fix)
 }
@@ -1678,9 +1876,7 @@ names(ret$coefficients) <- cnames <- paste0(names(dn2), dn2[[1L]][1L + parm])
 par <- ret$par
 intercepts <- function(parm, x) 
 {
-
     @<stratum prep@>
-
     return(intercepts)
 }
 ret$intercepts <- intercepts(par, x = xlist)
@@ -1709,10 +1905,28 @@ if (residuals) {
         rcr <- .snsr(par, x = xrclist, mu = mu, rightcensored = TRUE)
         ret$negresiduals <- c(rbind(matrix(ret$negresiduals, nrow = C),
                                     matrix(rcr, nrow = C)))
-     }
+    }
+    ret$negscaleresiduals <- .snssr(par, x = xlist, mu = mu)
+    if (!is.null(xrc)) {
+        rcr <- .snssr(par, x = xrclist, mu = mu, rightcensored = TRUE)
+        ret$negscaleresiduals <- 
+            c(rbind(matrix(ret$negscaleresiduals, nrow = C),
+                    matrix(rcr, nrow = C)))
+    }
 }
+
+if (logdet && hessian) ret$logdet <- ld(he(par))
+@}
+
+We add a function allowing us to evaluate the profile log-likelihood
+
+@d profile function
+@{
 ret$profile <- function(start, fix)
-    .free1wayML(xt, link = link, mu = mu, start = start, fix = fix, tol = tol, 
+    .free1wayML(xt, link = link, mu = mu, start = start, fix = fix, 
+                residuals = residuals, score = score, hessian = hessian,
+                logdet = logdet, MPL_Jeffreys = MPL_Jeffreys, 
+                dooptim = dooptim, control = control, trace = trace, tol = tol, 
                 ...) 
 ret$table <- xt
 
@@ -1725,7 +1939,7 @@ if (length(ret$mu) == 1) {
 }
 @}
 
-Finally, we put everything into one function which returns an object of
+and, finally, we put everything into one function which returns an object of
 class \code{free1wayML} for later use. The control parameters for
 \code{.NewtonRaphson} and \code{stats::nlminb} are the ones suggested by
 \cite{Harrell2024}. By default, the internal Newton-Raphson implementation
@@ -1735,13 +1949,32 @@ form of a \code{Matrix} object and thus computing the updates takes more
 time whenever a larger number of intercept parameters in present in the
 problem.
 
+The first step is now to make sure the main argument \code{x} is a tree-way
+table
+
+@d convert to three-way table
+@{
+xt <- x
+if (!is.table(x))
+     stop(gettextf("invalid argument '%s'", "x"), domain = NA) # 'y' in free1way ...
+dx <- dim(x)
+dn <- dimnames(x)
+if (length(dx) == 2L) {
+    x <- as.table(array(c(x), dim = dx <- c(dx, 1L)))
+    dimnames(x) <- dn <- c(dn, list(A = "A"))
+}
+@}
+
+and we are now ready to setup the main workhorse
+
 @d ML estimation
 @{
 .free1wayML <- function(x, link, mu = 0, start = NULL, fix = NULL, 
                         residuals = TRUE, score = TRUE, hessian = TRUE, 
-                        MPL_Jeffreys = FALSE,
-                        ### use nlminb for small sample sizes
-                        dooptim = c(".NewtonRaphson", "nlminb")[1 + (sum(x) < 20)],                         
+                        logdet = FALSE, MPL_Jeffreys = FALSE,
+                        ### use nlminb for small sample sizes or MPL
+                        dooptim = c(".NewtonRaphson", "nlminb")[1 + 
+                            ((sum(x) < 20) || (MPL_Jeffreys > 0))],
                         control = list(
                             "nlminb" = list(trace = trace, iter.max = 200,
                                             eval.max = 200, rel.tol = 1e-10,
@@ -1756,43 +1989,39 @@ problem.
                         tol = sqrt(.Machine$double.eps), ...) 
 {
 
-    ### convert to three-way table
-    xt <- x
-    if (!is.table(x))
-        stop(gettextf("invalid argument '%s'", "x"), domain = NA) # 'y' in free1way ...
-    dx <- dim(x)
-    dn <- dimnames(x)
-    if (length(dx) == 2L) {
-        x <- as.table(array(c(x), dim = dx <- c(dx, 1L)))
-        dimnames(x) <- dn <- c(dn, list(A = "A"))
-    }
-
-    ### short-cuts for link functions
-    F <- function(q) .p(link, q = q)
-    Q <- function(p) .q(link, p = p)
-    f <- function(q) .d(link, x = q)
-    fp <- function(q) .dd(link, x = q)
+    @<convert to three-way table@>
+    @<short-cuts for link functions@>
 
     if(!suppressPackageStartupMessages(requireNamespace("Matrix")))
         stop(gettextf("%s needs package 'Matrix' correctly installed",
                       ".free1wayML"),
                  domain = NA)
 
+    if (length(MPL_Jeffreys) > 1L || any(MPL_Jeffreys < 0L))
+        stop(gettextf("invalid argument '%s'", "MPL_Jeffreys"), domain = NA)
+
     @<setup and starting values@>
     @<negative logLik@>
     @<negative score@>
     @<negative score residuals@>
+    @<negative scale score residuals@>
     @<Hessian@>
     @<stratified negative logLik@>
     @<stratified negative score@>
     @<stratified Hessian@>
     @<stratified negative score residual@>
+    @<stratified negative scale score residual@>
+    @<logdet@>
     @<profile@>
     @<optim@> 
     @<post processing@>
+    @<profile function@>
 
-    class(ret) <- "free1wayML"
-    ret
+    if (MPL_Jeffreys > 0L)
+        class(ret) <- c("MPLfree1wayML", "free1wayML")
+    else
+        class(ret) <- "free1wayML"
+    return(ret)
 }
 @}
 
@@ -1940,8 +2169,8 @@ In addition, we compute permutation $p$-values
 @{
 if (!is.null(x$exact)) {
     PVAL <- switch(alternative,
-                   "two.sided" = 2 * min(c(x$exact$ple(sc), 
-                                           x$exact$pgr(sc))),
+                   "two.sided" = pmin(1, 2 * min(c(x$exact$ple(sc), 
+                                                   x$exact$pgr(sc)))),
                    "less" = x$exact$ple(sc),
                    "greater" = x$exact$pgr(sc))
 } else {
@@ -2091,7 +2320,7 @@ algorithm, mainly because the scores can be mapped to integers:
     stopifnot(m > 1)
     stopifnot(m < length(x))
 
-    d <- .Call(stats:::C_dpermdist2, sx, m)
+    d <- .Call(C_dpermdist2, sx, m)
     s <- seq.int(from = 1L, to = sum(rev(sx)[seq_len(m)]), by = 1L)
 
     STATISTIC <- sum(x[grp > 0])
@@ -2176,7 +2405,7 @@ free1way <- function(y, ...)
     UseMethod("free1way")
 
 free1way.table <- function(y, link = c("logit", "probit", "cloglog", "loglog"), 
-                           mu = 0, B = 0, exact = FALSE, ...)
+                           mu = 0, B = 0, exact = FALSE, MPL_Jeffreys = FALSE, ...)
 {
 
     cl <- match.call()
@@ -2200,18 +2429,21 @@ free1way.table <- function(y, link = c("logit", "probit", "cloglog", "loglog"),
         mu <- rep(mu, length.out = d[2L] - 1L)
     }
 
-    ret <- .free1wayML(y, link = link, mu = mu, ...)
+    ret <- .free1wayML(y, link = link, mu = mu, MPL_Jeffreys = MPL_Jeffreys, 
+                       ...)
     ret$link <- link
     ret$data.name <- DNAME
     ret$call <- cl
 
     @<free1way permutation tests@>
 
-    if (ret$MPL_Jeffreys) 
+    if (ret$MPL_Jeffreys > 0L) { 
         ret$method <- paste(ret$method, 
             "with Jeffreys prior penalisation", sep = ", ")
-
-    class(ret) <- "free1way"
+        class(ret) <- c("MPLfree1way", "free1way")
+    } else {
+        class(ret) <- "free1way"
+    }
     return(ret)
 }
 @}
@@ -2658,7 +2890,7 @@ if (!is.null(object$exact)) {
         rs <- object$perm$permStat
         qu <- .pq(round(rs, 10), alpha = 1 - conf.level)
         att.level <- mean(rs > qu[1] & rs < qu[2])
-        attr(CINT, "Attained level") <- att.level
+
     }
 }
 @}
@@ -2748,6 +2980,39 @@ if (is.na(CINT[p,2]))
             domain = NA)
 @}
 
+If requested, we post-process the confidence intervals and compute
+probabilistic indices (aka AUCs) or overlap coefficients
+
+@d PI OVL confint
+@{
+what <- match.arg(what)
+CINT <- switch(what, "shift" = CINT,
+                     ### probabilistic index = AUC monotone increasing
+                     "PI" = object$link$parm2PI(CINT),
+                     "AUC" = object$link$parm2PI(CINT), ### same as PI 
+                     ### overlap coefficient increasing on (-inf, 0)
+                     ### and decreasing on (0, inf)
+                     "OVL" = {
+                         ofun <- object$link$parm2OVL
+                         rs <- rowSums(CINT < 0) 
+                         ### upper < 0
+                         if (any(i <- (rs == 2L)))
+                             CINT[i,] <- ofun(CINT[i,])
+                         ### lower > 0
+                         if (any(i <- (rs == 0L)))
+                             CINT[i,] <- ofun(-CINT[i,2:1])
+                         ### lower < 0 < upper 
+                         if (any(i <- (rs == 1L))) {
+                             aCINT <- abs(CINT[i,,drop = FALSE])
+                             CINT[i,1L] <- ofun(-apply(aCINT, 1L, max))
+                             CINT[i,2L] <- 1
+                         }
+                         return(CINT)
+                     })[parm, , drop = FALSE]
+@}
+
+an ensemble everything into one method
+
 @d free1way confint
 @{
 confint.free1way <- function(object, parm,
@@ -2762,6 +3027,7 @@ confint.free1way <- function(object, parm,
     if (missing(parm)) 
         parm <- seq_along(cf)
 
+    att.level <- NULL
     CINT <- confint.default(object, level = level)
     if (test != "Wald") {
         wlevel <- level
@@ -2792,11 +3058,10 @@ confint.free1way <- function(object, parm,
         }
     }
 
-    what <- match.arg(what)
-    CINT <- switch(what, "shift" = CINT,
-                         "PI" = object$link$parm2PI(CINT),
-                         "AUC" = object$link$parm2PI(CINT), ### same as PI 
-                         "OVL" = object$link$parm2OVL(CINT))[parm, , drop = FALSE]
+    @<PI OVL confint@>
+
+    if (!is.null(att.level))
+        attr(CINT, "Attained level") <- att.level
     return(CINT)
 }
 @}
@@ -3119,20 +3384,12 @@ friedman.test(RoundingTimes)
 (ft <- free1way(time ~ me | id, data = d))
 @@
 
-<<friedman-add>>=
-summary(ft)
-library("multcomp")
-glht(ft, linfct = mcp(me = "Tukey"))
-@@
-
 <<friedman-link>>=
 logLik(ft)
 logLik(free1way(time ~ me | id, data = d, link = "probit"))
 logLik(free1way(time ~ me | id, data = d, link = "cloglog"))
 logLik(free1way(time ~ me | id, data = d, link = "loglog"))
 @@
-
-Maybe proportional-hazards model better?
 
 \section{McNemar Test}
 
@@ -3161,7 +3418,6 @@ confint(mcn, test = "Wald")
 free1way(xtabs(~ performance + survey + voter, data = x), link = "probit")
 @@
 
-
 \section{Incomplete Block Designs}
 
 \code{friedman.test} expects all blocks to be complete and
@@ -3177,9 +3433,9 @@ summary(free1way(score ~ recipe | panelist, data = taste))
 @@
 
 
-\section{Contrast Tests}
+\section{Contrasts Tests}
 
-\code{free1way} output can be used to define multiple contrast tests and
+\code{free1way} output can be used to define multiple contrasts tests and
 corresponding confidence intervals via the \pkg{multcomp} package. For
 example, Tukey-style simultaneous all-pair comparisons can be implemented via
 <<Tukey>>=
@@ -3187,6 +3443,79 @@ tk <- free1way(Ozone ~ Month, data = airquality)
 library("multcomp")
 confint(glht(tk, linfct = mcp(Month = "Tukey")))
 @@
+
+\section{Scale Tests}
+
+@o scaleTest.R -cp
+@{
+@<scale tests@>
+@}
+
+If, instead of the location model~(\ref{model}), a scale-model
+\begin{eqnarray} \label{scale}
+F_Y(y \mid  \rT = k, \rS = b) = F\left(F^{-1}\left(F_Y(y \mid \rT = 1, \rS = b)\right) /  
+                                       \exp(\xi_k)\right), \quad k = 2, \dots, K
+\end{eqnarray}
+is assumed, we might be interested in testing the null hypotheses of the
+form $H_0: \xi_k = 0$ instead. Unfortunately, we cannot estimate $\xi_k$
+(because the negative log-likelihood is no longer convex in its parameters)
+except under the null of all scale parameters being zero. However, for
+permutation score \emph{tests}, it is sufficient to fit the model under the
+null and the experimental function \code{scaleTest} reports corresponding
+permutation $p$-values.
+
+@d scale tests
+@{
+scaleTest <- function(object, B = 0, ...) {
+
+    alternative <- "two.sided"
+    y <- object$table
+    d <- dim(y)
+    ret <- object
+    cf <- ret$par
+    cf[idx <- seq_len(d[2L] - 1L)] <- 0
+    pr <- ret$profile(cf, idx)
+    res <- - pr$negscaleresiduals
+
+    @<Strasser Weber@>
+    @<resampling@>
+
+    if (length(dim(y)) == 3L) y <- y[,,ret$strata, drop = FALSE]
+    if (length(dim(y)) == 4L) {
+        y <- y[,,ret$strata,, drop = FALSE]
+        dy <- dim(y)
+        dy[1] <- dy[1] * 2
+        y <- apply(y, 3, function(x) rbind(x[,,"TRUE"], x[,,"FALSE"]), simplify = FALSE)
+        y <- array(unlist(y), dim = dy[1:3])
+    }
+    ret$perm <- .resample(res, y, B = B)
+
+    STATISTIC <- ret$perm$testStat
+    x <- ret
+    cf <- coef(object)
+    sc <- 0
+    @<Permutation p-values@>
+
+    RVAL <- list(statistic = STATISTIC, parameter = NULL, p.value = PVAL, 
+        null.value = 1, alternative = alternative, method = "Permutation scale test",
+        data.name = x$data.name)
+    class(RVAL) <- "htest"
+    return(RVAL)
+}
+@}
+
+With a probit link, the corresponding test is known as Klotz test. A
+comparison to its implementation in the \pkg{coin} package does not result
+in identical $p$-values, because the normal scores $\Phi^{-1}(i / (N + 1))$
+used in \pkg{coin} (with $i$ being the rank of the observation)
+are close to but not identical to the empirical likelihood estimators of the intercept
+parameters.
+<<klotz>>=
+example(klotz_test, echo = FALSE)
+klotz_test(serum ~ method, data = sid)
+scaleTest(free1way(serum ~ method, data = sid, link = "probit"))
+@@
+
 
 \chapter{Model Diagnostics}
 
@@ -3579,16 +3908,18 @@ rfree1way <- function(n, prob = NULL, alloc_ratio = 1,
     ctrl <- "Control"
     colnames(N) <- c(ctrl, names(delta))
 
-    if (length(offset) != K)
-        offset <- rep_len(offset, K)
-
     trt <- gl(K, 1, labels = colnames(N))
     blk <- gl(B, 1, labels = rownames(N))
     ret <- expand.grid(blocks = blk, groups = trt)
     if (B == 1L) ret$blocks <- NULL
     ret <- ret[rep(seq_len(nrow(ret)), times = N), , drop = FALSE]
+
+    if (length(offset) <= K)
+        offset <- rep_len(offset, K)[ret$groups]
+    if (length(offset) != nrow(ret))
+        stop(gettextf("invalid argument '%s'", "offset"), domain = NA)
     ret$y <- .rfree1way(nrow(ret), 
-                        delta = offset[ret$groups] + c(0, delta)[ret$groups], 
+                        delta = offset + c(0, delta)[ret$groups], 
                         link = link)
     if (is.null(prob)) return(ret)
 
@@ -4067,14 +4398,123 @@ power.free1way.test(n = 19, prob = prb, delta = delta, seed = 3)
 
 \chapter{Penalisation} \label{ch:penal}
 
-Sometimes, especially under complete separation, the maximum likelihood
-estimator does not exist. We could think of offering the option to add a
+Sometimes, especially under complete separation or when many blocks only contain
+small sample sizes, the maximum likelihood
+estimator does not exist or is biased. We could think of offering the option to add a
 penalty term to the log-likelihood, for example half of the log-determinant
 of the Hessian (Jeffreys prior) as suggested by \cite{Firth1993} and studied in
-\cite{KosmidisFirth2020}. Until and including 1.0-3 (\proglang{R} 4.6-0), \code{free1way}
-penalised the profile likelihood, automatically if deemed necessary.
-Later versions penalise all parameters on request, that is, when 
-the \code{MPL_Jeffreys} argument is \code{TRUE}.
+\cite{KosmidisFirth2020}.  The \code{MPL_Jeffreys} argument can be used to request this type of
+penalisation from \code{free1way}. Currently, we only offer Wald-type inference procedures based on the
+observed Fisher information evaluated at the penalised parameter estimates,
+so we disable all other methods
+
+@d MPLfree1way methods
+@{
+confint.MPLfree1way <- function(object, parm,
+    level = .95, test = "Wald", 
+    what = c("shift", "PI", "AUC", "OVL"), ...) {
+
+    test <- match.arg(test)
+    return(confint.free1way(object, parm = parm, level = level, 
+                            test = test, what = what, ...))
+}
+
+summary.MPLfree1way <- function(object, test = "Wald", 
+                                alternative = c("two.sided", "less", "greater"), 
+                                tol = .Machine$double.eps, ...) {
+
+    test <- match.arg(test)
+    return(summary.free1way(object, test = test, 
+                            alternative = alternative, tol = tol, ...))
+}
+
+print.MPLfree1way <- function(x, test = "Wald", ...) {
+
+    test <- match.arg(test)
+    return(invisible(print.free1way(x, test = test, ...)))
+}
+@}
+
+Note that penalised estimation is currently slow because neither the score
+nor the Fisher information corresponding to the penalised log-likelihood
+have been implemented.
+
+As an example, consider the rabbits data from the manual page of the
+Mantel-Haenszel test. We first perform the test, starting with the classical
+implementation and then using \code{free1way}
+<<Rabbits>>=
+example(mantelhaen.test, echo = FALSE)
+### "Response" is the response and comes first
+Rabbits <- aperm(as.table(Rabbits), c(2, 1, 3))
+
+### identical p-values
+(mh <- mantelhaen.test(Rabbits, correct = FALSE))
+(ft <- free1way(Rabbits))
+
+log(mh$estimate)
+coef(ft)
+@@
+The $p$-values are identical, but the parameter estimates are not. The
+reason is that, by default, maximum likelihood estimation is performed by
+\code{free1way}, which in case of small blocks is biased.
+
+We now solve the identical estimation problem using a binary logistic
+regression
+<<Rabbits-glm>>=
+rab <- as.data.frame(Rabbits)
+lr <- glm(Response ~ 0 + Penicillin.Level + 
+                     Delay, data = rab, weights = rab$Freq, 
+          family = binomial(link = "logit"))
+
+logLik(ft)
+logLik(lr)
+
+coef(ft)
+rev(coef(lr))[1L]
+
+sqrt(vcov(ft))
+sqrt(rev(diag(vcov(lr)))[1L])
+@@
+
+where the log-likelihoods, parameter estimates, and standard errors are the
+same as those obtained from \code{free1way}. Using package \pkg{brglm2}, we
+can perform Firth method of bias reduction 
+<<Rabbits-Firth>>=
+library("brglm2")
+Flr <- glm(Response ~ 0 + Penicillin.Level + Delay, data = rab, weights = rab$Freq, 
+           family = binomial(link = "logit"), method = "brglmFit", type = "MPL_Jeffreys")
+@@
+and also request the same form of penalisation in \code{free1way}
+<<Rabbits-Jeffreys>>=
+ftJ <- free1way(Rabbits, MPL_Jeffreys = TRUE)
+@@
+where the results are practically identical and much closer to the results
+reported by \code{mantelhaen.test}
+<<Rabbits-results>>=
+logLik(ftJ)
+logLik(Flr)
+
+log(mh$estimate)
+coef(ftJ)
+rev(coef(Flr))[1L]
+
+diag(vcov(ftJ))
+rev(diag(vcov(Flr)))[1L]
+
+log(mh$conf.int)
+confint(ftJ)
+confint(Flr)[names(rev(coef(Flr))[1L]),]
+@@
+
+
+% some references
+%### https://doi.org/10.1111/j.0006-341X.2001.00114.x
+%### https://doi.org/10.1111/j.1467-9876.2012.01057.x
+%### https://doi.org/10.1186/s12874-017-0313-9
+%### https://files.osf.io/v1/resources/fet4d_v3/providers/osfstorage/682fb176db88f967facacb5a?format=pdf&action=download&direct&version=1
+%### https://doi.org/10.1002/sim.6537
+%### https://doi.org/10.1007/s11222-023-10217-3
+%### https://arxiv.org/abs/2510.06465
 
 \chapter{Acknowledgements}
 

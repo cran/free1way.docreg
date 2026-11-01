@@ -1,6 +1,6 @@
 
 pkgs <- c("free1way.docreg", "rms", "survival")
-if (!all(sapply(pkgs, require, character.only = TRUE)))
+if (!all(sapply(pkgs, require, character.only = TRUE, warn.conflicts = FALSE)))
     quit()
 
 options(digits = 5)
@@ -118,3 +118,15 @@ confint(ft, test = "Permutation")
 ft <- free1way(y = y, groups = x, B = 10000)
 print(ft, test = "Permutation")
 confint(ft, test = "Permutation")
+
+### generate data from linear transformation model with linear predictor
+### as offset in rfree1way
+N <- 500
+K <- 3
+P <- 2
+beta <- c(-1.5, 1.75)
+X <- matrix(runif(N * K * P), ncol = P)
+lp <- X %*% beta
+d <- rfree1way(n = N, delta = c(0, .5), offset = lp)
+d <- cbind(d, as.data.frame(X))
+tail(coef(orm(y ~ groups + V1 + V2, data = d)), 4)

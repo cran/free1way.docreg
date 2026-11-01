@@ -1,5 +1,5 @@
 
-library("free1way.docreg")
+library("free1way.docreg", warn.conflicts = FALSE)
 options(digits = 5)
 set.seed(29)
 tol <- 1e-5

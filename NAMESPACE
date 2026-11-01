@@ -1,7 +1,9 @@
 
 ### when shipped w/o R/ and man/
 # Export all names
-exportPattern("^[^.]")
+export(scaleTest)
+importFrom("stats", "coef", "model.matrix", "pchisq", "pnorm",
+           "r2dtable")
 
 ### else
 #importFrom("stats", "dlogis", "optim", "plogis", "qlogis", "qnorm",
@@ -10,11 +12,12 @@ exportPattern("^[^.]")
 #           "splinefun", "vcov", "runif", "stepfun",
 #           "ecdf", "na.pass", "terms", "model.weights", "xtabs", "rmultinom",
 #           "as.formula", "confint.default", "delete.response",
-#           "model.frame", "lm.fit")
+#           "model.frame", "lm.fit", "pexp")
 #importFrom("graphics", "lines", "points", "polygon")
-
-#export(free1way, power.free1way.test, ppplot, rfree1way)
-
+#S3method("print", "MPLfree1way")
+#
+#export(free1way, power.free1way.test, ppplot, rfree1way, scaleTest)
+#
 #S3method("free1way", "formula")
 #S3method("free1way", "numeric")
 #S3method("free1way", "factor")
@@ -23,10 +26,13 @@ exportPattern("^[^.]")
 #S3method("vcov", "free1way")
 #S3method("logLik", "free1way")
 #S3method("confint", "free1way")
+#S3method("confint", "MPLfree1way")
 #S3method("summary", "free1way")
+#S3method("summary", "MPLfree1way")
 #S3method("terms", "free1way")
 #S3method("plot", "free1way")
 #S3method("model.frame", "free1way")
 #S3method("model.matrix", "free1way")
 #S3method("print", "free1way")
+#S3method("print", "MPLfree1way")
 #S3method("print", "summary.free1way")

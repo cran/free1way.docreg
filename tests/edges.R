@@ -1,6 +1,5 @@
 
-library("free1way.docreg")
-
+library("free1way.docreg", warn.conflicts = FALSE)
 N <- 10
 nd <- data.frame(y = rnorm(N), x = gl(1, N))
 try(free1way(y ~ x, data = nd))

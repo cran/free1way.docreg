@@ -3,7 +3,7 @@ set.seed(29)
 options(digits = 5)
 
 pkgs <- c("free1way.docreg", "survival", "tram")
-if (!all(sapply(pkgs, require, character.only = TRUE)))
+if (!all(sapply(pkgs, require, character.only = TRUE, warn.conflicts = FALSE)))
     quit()
 
 beta <- 1

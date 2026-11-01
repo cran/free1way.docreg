@@ -1,0 +1,441 @@
+
+R Under development (unstable) (2026-09-13 r90534) -- "Unsuffered Consequences"
+Copyright (C) 2026 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> 
+> pkgs <- c("free1way.docreg", "brglm2")
+> if (!all(sapply(pkgs, require, character.only = TRUE, warn.conflicts = FALSE)))
++     quit()
+Loading required package: free1way.docreg
+Loading required package: brglm2
+> 
+> ### glm fitting and deprecated .structure calls in brglm2
+> options(digits = 5, warn = -1L)
+> set.seed(29)
+> 
+> ### check log-determinant on simulated data
+> d <- rfree1way(n = 5, blocks = 3, delta = 1)
+> ft <- free1way(y ~ groups | blocks, data = d, logdet = TRUE)
+> 
+> H <- get("he", envir = environment(ft$profile))(ft$par)
+> all.equal(unname(c(ft$logdet)), 
++                  c(determinant(as.matrix(H), log = TRUE)$modulus))
+[1] TRUE
+> 
+> ### UCBAdmissions (large sample)
+> ft <- free1way(UCBAdmissions, logdet = TRUE)
+> 
+> H <- get("he", envir = environment(ft$profile))(ft$par)
+> all.equal(unname(c(ft$logdet)), 
++                  c(determinant(as.matrix(H), log = TRUE)$modulus))
+[1] TRUE
+> 
+> ucb <- as.data.frame(UCBAdmissions)
+> 
+> lr <- glm(Admit ~ 0 + Dept + Gender, data = ucb, weights = ucb$Freq, 
++           family = binomial(link = "logit"))
+> 
+> log(mantelhaen.test(UCBAdmissions)$estimate)
+common odds ratio 
+         -0.10016 
+> coef(ft)
+GenderFemale 
+    -0.09987 
+> rev(coef(lr))[1L]
+GenderFemale 
+    -0.09987 
+> 
+> logLik(ft)
+[1] -2593.7
+> logLik(lr)
+'log Lik.' -2593.7 (df=7)
+> diag(vcov(ft))
+GenderFemale 
+   0.0065362 
+> rev(diag(vcov(lr)))[1L]
+GenderFemale 
+   0.0065362 
+> 
+> confint(ft, test = "Wald")
+                2.5 %   97.5 %
+GenderFemale -0.25833 0.058586
+> confint.default(lr)[names(rev(coef(lr))[1L]),]
+    2.5 %    97.5 % 
+-0.258326  0.058586 
+> confint(ft, test = "Rao")
+                2.5 %   97.5 %
+GenderFemale -0.25826 0.058524
+> confint(lr, test = "Rao")[names(rev(coef(lr))[1L]),]
+Waiting for profiling to be done...
+   2.5 %   97.5 % 
+-0.25825  0.05851 
+> confint(ft, test = "LRT")
+                2.5 %   97.5 %
+GenderFemale -0.25883 0.058183
+> confint(lr, test = "LRT")[names(rev(coef(lr))[1L]),]
+Waiting for profiling to be done...
+    2.5 %    97.5 % 
+-0.258821  0.058169 
+> 
+> ## with penalisation
+> ftJ <- free1way(UCBAdmissions, MPL_Jeffreys = TRUE, logdet = TRUE)
+> 
+> H <- get("he", envir = environment(ftJ$profile))(ftJ$par)
+> all.equal(unname(c(ftJ$logdet)), 
++                  c(determinant(as.matrix(H), log = TRUE)$modulus))
+[1] TRUE
+> 
+> ucb <- as.data.frame(UCBAdmissions)
+> 
+> Flr <- glm(Admit ~ 0 + Dept + Gender, data = ucb, weights = ucb$Freq, 
++            family = binomial(link = "logit"), method = "brglmFit", type = "MPL_Jeffreys")
+> 
+> log(mantelhaen.test(UCBAdmissions)$estimate)
+common odds ratio 
+         -0.10016 
+> coef(ft)
+GenderFemale 
+    -0.09987 
+> rev(coef(lr))[1L]
+GenderFemale 
+    -0.09987 
+> 
+> diag(vcov(ft))
+GenderFemale 
+   0.0065362 
+> rev(diag(vcov(lr)))[1L]
+GenderFemale 
+   0.0065362 
+> 
+> confint(ftJ, test = "Wald")
+                2.5 %   97.5 %
+GenderFemale -0.25776 0.058973
+> ### brglm2:::confint.brglmFit -> stats:::confint.default
+> confint(Flr)[names(rev(coef(Flr))[1L]),]
+    2.5 %    97.5 % 
+-0.257754  0.058974 
+> 
+> ### Rabbits data
+> example(mantelhaen.test, echo = FALSE)
+> Rabbits <- aperm(as.table(Rabbits), c(2, 1, 3))
+> 
+> mantelhaen.test(Rabbits, correct = FALSE)
+
+	Mantel-Haenszel chi-squared test without continuity correction
+
+data:  Rabbits
+Mantel-Haenszel X-squared = 5.66, df = 1, p-value = 0.017
+alternative hypothesis: true common odds ratio is not equal to 1
+95 percent confidence interval:
+  1.0267 47.7251
+sample estimates:
+common odds ratio 
+                7 
+
+> 
+> ft <- free1way(Rabbits, logdet = TRUE)
+> 
+> H <- get("he", envir = environment(ft$profile))(ft$par)
+> all.equal(unname(c(ft$logdet)), 
++                  c(determinant(as.matrix(H), log = TRUE)$modulus))
+[1] TRUE
+> 
+> rab <- as.data.frame(Rabbits)
+> 
+> lr <- glm(Response ~ 0 + Penicillin.Level + 
++                      Delay, data = rab, weights = rab$Freq, 
++           family = binomial(link = "logit"))
+> 
+> coef(ft)
+Delay1.5h 
+   2.5496 
+> rev(coef(lr))[1L]
+Delay1.5h 
+   2.5496 
+> 
+> logLik(ft)
+[1] -14.429
+> logLik(lr)
+'log Lik.' -14.429 (df=6)
+> 
+> diag(vcov(ft))
+Delay1.5h 
+   1.3811 
+> rev(diag(vcov(lr)))[1L]
+Delay1.5h 
+   1.3811 
+> 
+> confint(ft, test = "Wald")
+            2.5 % 97.5 %
+Delay1.5h 0.24627  4.853
+> confint(ft, test = "Rao")
+            2.5 % 97.5 %
+Delay1.5h 0.45615 4.5557
+> confint(lr, test = "Rao")[names(rev(coef(lr))[1L]),]
+Waiting for profiling to be done...
+  2.5 %  97.5 % 
+0.45674 4.55541 
+> confint(ft, test = "LRT")
+            2.5 % 97.5 %
+Delay1.5h 0.57206 5.5978
+> confint(lr, test = "LRT")[names(rev(coef(lr))[1L]),]
+Waiting for profiling to be done...
+  2.5 %  97.5 % 
+0.57225 5.59820 
+> 
+> ## with penalisation
+> ftJ <- free1way(Rabbits, MPL_Jeffreys = TRUE, logdet = TRUE)
+> 
+> H <- get("he", envir = environment(ftJ$profile))(ftJ$par)
+> all.equal(unname(c(ftJ$logdet)), 
++                  c(determinant(as.matrix(H), log = TRUE)$modulus))
+[1] TRUE
+> 
+> Flr <- glm(Response ~ 0 + Penicillin.Level + Delay, data = rab, weights = rab$Freq, 
++            family = binomial(link = "logit"), method = "brglmFit", type = "MPL_Jeffreys")
+> 
+> cf <- ftJ$par
+> cbind(c(-cf[seq_along(cf)[-1L]], cf[1L]), coef(Flr))
+                        [,1]     [,2]
+Penicillin.Level1/8  2.61399  2.61399
+Penicillin.Level1/4  0.21257  0.21257
+Penicillin.Level1/2 -1.81132 -1.81133
+Penicillin.Level1   -3.42330 -3.42331
+Penicillin.Level4   -4.45572 -4.45572
+Delay1.5h            2.03710  2.03711
+> 
+> log(mantelhaen.test(Rabbits)$estimate)
+common odds ratio 
+           1.9459 
+> coef(ftJ)
+Delay1.5h 
+   2.0371 
+> rev(coef(Flr))[1L]
+Delay1.5h 
+   2.0371 
+> 
+> diag(vcov(ftJ))
+Delay1.5h 
+  0.91962 
+> rev(diag(vcov(Flr)))[1L]
+Delay1.5h 
+  0.91963 
+> 
+> H <- get("he", envir = environment(ftJ$profile))(ftJ$par)
+> max(abs(solve(H)[c(seq_along(cf)[-1L], 1), c(seq_along(cf)[-1L], 1)] - vcov(Flr)))
+[1] 1.7344
+> 
+> confint(ftJ, test = "Wald")
+            2.5 % 97.5 %
+Delay1.5h 0.15755 3.9166
+> confint(Flr)[names(rev(coef(Flr))[1L]),]
+  2.5 %  97.5 % 
+0.15756 3.91666 
+> 
+> ### repeated measures
+> d <- rfree1way(n = 1, blocks = 25, delta = 1)
+> d$y <- factor(d$y < .5)
+> 
+> ft <- free1way(y ~ groups | blocks, data = d, logdet = TRUE)
+> 
+> H <- get("he", envir = environment(ft$profile))(ft$par)
+> all.equal(unname(c(ft$logdet)), 
++                  c(determinant(as.matrix(H), log = TRUE)$modulus))
+[1] TRUE
+> 
+> lr <- glm(y ~ 0 + blocks + groups, data = d, 
++           family = binomial(link = "logit"))
+> 
+> coef(ft)
+ groupsB 
+-0.71335 
+> rev(coef(lr))[1L]
+ groupsB 
+-0.71335 
+> 
+> logLik(ft)
+[1] -23.035
+> logLik(lr)
+'log Lik.' -23.035 (df=26)
+> 
+> diag(vcov(ft))
+groupsB 
+0.48571 
+> rev(diag(vcov(lr)))[1L]
+groupsB 
+0.48571 
+> 
+> confint(ft, test = "Wald")
+          2.5 %  97.5 %
+groupsB -2.0793 0.65261
+> confint(ft, test = "Rao")
+          2.5 %  97.5 %
+groupsB -2.0541 0.62737
+> confint(lr, test = "Rao")[names(rev(coef(lr))[1L]),]
+Waiting for profiling to be done...
+   2.5 %   97.5 % 
+-2.05396  0.62726 
+> confint(ft, test = "LRT")
+          2.5 %  97.5 %
+groupsB -2.1205 0.63831
+> confint(lr, test = "LRT")[names(rev(coef(lr))[1L]),]
+Waiting for profiling to be done...
+   2.5 %   97.5 % 
+-2.12059  0.63833 
+> 
+> ## with penalisation
+> ftJ <- free1way(y ~ groups | blocks, data = d, MPL_Jeffreys = TRUE, logdet = TRUE)
+> 
+> H <- get("he", envir = environment(ftJ$profile))(ftJ$par)
+> all.equal(unname(c(ftJ$logdet)), 
++                  c(determinant(as.matrix(H), log = TRUE)$modulus))
+[1] TRUE
+> 
+> Flr <- glm(y ~ 0 + blocks + groups, data = d, 
++            family = binomial(link = "logit"), method = "brglmFit", type = "MPL_Jeffreys")
+> 
+> cf <- ftJ$par
+> cbind(c(-cf[seq_along(cf)[-1L]], cf[1L]), coef(Flr))
+                  [,1]     [,2]
+blocksblock1   0.20617  0.20617
+blocksblock2   0.20617  0.20617
+blocksblock3   0.20617  0.20617
+blocksblock4  -1.40600 -1.40601
+blocksblock5   1.81835  1.81835
+blocksblock6   0.20617  0.20617
+blocksblock7   0.20617  0.20617
+blocksblock8   0.20617  0.20617
+blocksblock9   0.20617  0.20617
+blocksblock10  0.20617  0.20617
+blocksblock11 -1.40600 -1.40601
+blocksblock12  0.20617  0.20617
+blocksblock13 -1.40600 -1.40601
+blocksblock14 -1.40600 -1.40601
+blocksblock15  0.20617  0.20617
+blocksblock16  0.20617  0.20617
+blocksblock17 -1.40600 -1.40601
+blocksblock18  0.20617  0.20617
+blocksblock19  0.20617  0.20617
+blocksblock20  0.20617  0.20617
+blocksblock21  0.20617  0.20617
+blocksblock22 -1.40600 -1.40601
+blocksblock23  1.81835  1.81835
+blocksblock24  0.20617  0.20617
+blocksblock25  0.20617  0.20617
+groupsB       -0.41234 -0.41234
+> 
+> log(mantelhaen.test(xtabs(~ y + groups + blocks, data = d))$estimate)
+common odds ratio 
+         -0.35667 
+> coef(ftJ)
+ groupsB 
+-0.41234 
+> rev(coef(Flr))[1L]
+ groupsB 
+-0.41234 
+> 
+> diag(vcov(ftJ))
+groupsB 
+0.37754 
+> rev(diag(vcov(Flr)))[1L]
+groupsB 
+0.37754 
+> 
+> H <- get("he", envir = environment(ftJ$profile))(ftJ$par)
+> max(abs(solve(H)[c(seq_along(cf)[-1L], 1), c(seq_along(cf)[-1L], 1)] - vcov(Flr)))
+[1] 0.42907
+> 
+> confint(ftJ, test = "Wald")
+          2.5 %  97.5 %
+groupsB -1.6166 0.79195
+> confint(Flr)[names(rev(coef(Flr))[1L]),]
+   2.5 %   97.5 % 
+-1.61663  0.79195 
+> 
+> ### with powers of Jeffrey's prior
+> ftJ <- free1way(y ~ groups | blocks, data = d, MPL_Jeffreys = 2 * 1.5, logdet = TRUE)
+> 
+> H <- get("he", envir = environment(ftJ$profile))(ftJ$par)
+> all.equal(unname(c(ftJ$logdet)), 
++                  c(determinant(as.matrix(H), log = TRUE)$modulus))
+[1] TRUE
+> 
+> Flr <- glm(y ~ 0 + blocks + groups, data = d, 
++            family = binomial(link = "logit"), method = "brglmFit", 
++            type = "MPL_Jeffreys", a = 1.5)
+> 
+> cf <- ftJ$par
+> cbind(c(-cf[seq_along(cf)[-1L]], cf[1L]), coef(Flr))
+                  [,1]     [,2]
+blocksblock1   0.10487  0.10487
+blocksblock2   0.10487  0.10487
+blocksblock3   0.10487  0.10487
+blocksblock4  -0.72722 -0.72722
+blocksblock5   0.93696  0.93696
+blocksblock6   0.10487  0.10487
+blocksblock7   0.10487  0.10487
+blocksblock8   0.10487  0.10487
+blocksblock9   0.10487  0.10487
+blocksblock10  0.10487  0.10487
+blocksblock11 -0.72722 -0.72722
+blocksblock12  0.10487  0.10487
+blocksblock13 -0.72722 -0.72722
+blocksblock14 -0.72722 -0.72722
+blocksblock15  0.10487  0.10487
+blocksblock16  0.10487  0.10487
+blocksblock17 -0.72722 -0.72722
+blocksblock18  0.10487  0.10487
+blocksblock19  0.10487  0.10487
+blocksblock20  0.10487  0.10487
+blocksblock21  0.10487  0.10487
+blocksblock22 -0.72722 -0.72722
+blocksblock23  0.93696  0.93696
+blocksblock24  0.10487  0.10487
+blocksblock25  0.10487  0.10487
+groupsB       -0.20974 -0.20974
+> 
+> log(mantelhaen.test(xtabs(~ y + groups + blocks, data = d))$estimate)
+common odds ratio 
+         -0.35667 
+> coef(ftJ)
+ groupsB 
+-0.20974 
+> rev(coef(Flr))[1L]
+ groupsB 
+-0.20974 
+> 
+> diag(vcov(ftJ))
+groupsB 
+0.33766 
+> rev(diag(vcov(Flr)))[1L]
+groupsB 
+0.33766 
+> 
+> H <- get("he", envir = environment(ftJ$profile))(ftJ$par)
+> max(abs(solve(H)[c(seq_along(cf)[-1L], 1), c(seq_along(cf)[-1L], 1)] - vcov(Flr)))
+[1] 0.35158
+> 
+> confint(ftJ, test = "Wald")
+          2.5 %  97.5 %
+groupsB -1.3486 0.92917
+> ### brglm2:::confint.brglmFit -> stats:::confint.default
+> confint(Flr)[names(rev(coef(Flr))[1L]),]
+   2.5 %   97.5 % 
+-1.34864  0.92917 
+> 
+> proc.time()
+   user  system elapsed 
+  4.813   0.082   4.890 

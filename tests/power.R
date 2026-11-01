@@ -1,5 +1,5 @@
 
-library("free1way.docreg")
+library("free1way.docreg", warn.conflicts = FALSE)
 options(digits = 4)
 
 args <- expand.grid(n = c(15, 50),

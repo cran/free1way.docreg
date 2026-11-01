@@ -1,5 +1,5 @@
 
-R version 4.6.0 (2026-04-24) -- "Because it was There"
+R Under development (unstable) (2026-09-08 r90509) -- "Unsuffered Consequences"
 Copyright (C) 2026 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu
 
@@ -17,7 +17,7 @@ Type 'q()' to quit R.
 
 > 
 > pkgs <- c("free1way.docreg", "coin", "multcomp")
-> if (!all(sapply(pkgs, require, character.only = TRUE)))
+> if (!all(sapply(pkgs, require, character.only = TRUE, warn.conflicts = FALSE)))
 +     quit()
 Loading required package: free1way.docreg
 Loading required package: coin
@@ -135,4 +135,4 @@ Linear Hypotheses:
 > 
 > proc.time()
    user  system elapsed 
-  0.919   0.040   0.953 
+  1.997   0.086   0.945 
